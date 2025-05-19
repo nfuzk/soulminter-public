@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply antialiased;
+  }
+  
+  body {
+    @apply bg-base-100 text-base-content;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-base-200;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-base-300 rounded-full hover:opacity-80 transition-colors duration-200;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* example: override wallet button style */
+.wallet-adapter-button:not([disabled]):hover {
+  background-color: #707070;
+}
+
+:root {
+    --primary-color: #9945FF;
+    --secondary-color: #14F195;
+    --accent-color: #00C2FF;
+    --dark-bg: #0F1624;
+    --darker-bg: #080C18;
+    --light-text: #F8F9FA;
+    --gray-text: #ADB5BD;
+    --card-bg: rgba(25, 32, 48, 0.7);
+    --gradient-primary: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    --gradient-secondary: linear-gradient(90deg, var(--secondary-color), var(--accent-color));
+    --glow-shadow: 0 0 15px rgba(153, 69, 255, 0.5);
+    --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
