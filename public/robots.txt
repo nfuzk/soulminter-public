@@ -1,0 +1,11 @@
+# *
+User-agent: *
+Allow: /
+Disallow: /api/*
+Disallow: /private/*
+
+# Host
+Host: https://soulminter.io
+
+# Sitemaps
+Sitemap: https://soulminter.io/sitemap.xml

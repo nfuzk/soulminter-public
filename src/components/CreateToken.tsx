@@ -4,8 +4,10 @@ import {
   PublicKey,
   SystemProgram,
   Transaction,
+  TransactionInstruction,
   LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
+import { useSimpleWalletAuth } from '../hooks/useSimpleWalletAuth';
 import {
   MINT_SIZE,
   TOKEN_PROGRAM_ID,
@@ -22,15 +24,17 @@ import {
   createCreateMetadataAccountV3Instruction,
   PROGRAM_ID,
 } from "@metaplex-foundation/mpl-token-metadata";
-import { FC, useCallback, useState, useEffect } from "react";
+import { FC, useCallback, useState, useEffect, useRef } from "react";
 import { notify } from "utils/notifications";
 import { ClipLoader } from "react-spinners";
-import { PinataSDK } from "pinata-web3";
 import { useRouter } from "next/router";
+import Image from "next/image";
 import styles from "../views/create/styles.module.css";
 import { FEE_CONFIG, UPLOAD_CONFIG, FEATURES, ERROR_MESSAGES } from '../config';
-import { validateTokenName, validateTokenSymbol, validateTokenDecimals, validateInitialSupply, validateTokenDescription } from '../utils/validation';
+import { validateTokenName, validateTokenSymbol, validateTokenDecimals, validateInitialSupply, validateTokenDescription, validateCustomMintPattern } from '../utils/validation';
 import { getSolanaNetwork } from '../utils/getSolanaNetwork';
+import { useMobileDetection } from '../utils/mobileDetection';
+import bs58 from "bs58";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
 const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -38,7 +42,7 @@ const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'
 // Add loading steps enum
 const LoadingStep = {
   INITIALIZING: "Initializing...",
-  UPLOADING_IMAGE: "Uploading image to IPFS...",
+  UPLOADING_IMAGE: "Uploading image to Arweave...",
   CREATING_MINT: "Creating mint account...",
   TRANSFERRING_FEE: "Transferring fee...",
   TRANSFERRING_COMMISSION: "Transferring affiliate commission...",
@@ -51,11 +55,32 @@ const LoadingStep = {
   COMPLETE: "Complete!"
 };
 
+// Modern Custom Switch Component
+const ModernSwitch = ({ checked, onChange, id, label }) => (
+  <div className={styles.modernSwitch}>
+    <label className={styles.switchLabel}>
+      <input 
+        type="checkbox" 
+        id={id} 
+        checked={checked} 
+        onChange={onChange} 
+        className={styles.switchInput} 
+      />
+      <div className={styles.switchTrack}>
+        <div className={styles.switchThumb}></div>
+      </div>
+      <span className={styles.switchText}>{label}</span>
+  </label>
+  </div>
+);
+
 export const CreateToken: FC = () => {
   const { connection } = useConnection();
-  const { publicKey, sendTransaction, signTransaction } = useWallet();
+  const { publicKey, sendTransaction } = useWallet();
+  const { makeAuthenticatedRequest } = useSimpleWalletAuth();
   const router = useRouter();
   const { ref } = router.query;
+  const isMobile = useMobileDetection();
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [tokenName, setTokenName] = useState("");
@@ -70,10 +95,34 @@ export const CreateToken: FC = () => {
   const [revokeFreezeAuthority, setRevokeFreezeAuthority] = useState(false);
   const [makeMetadataImmutable, setMakeMetadataImmutable] = useState(false);
   const [isSocialLinksExpanded, setIsSocialLinksExpanded] = useState(false);
+  const [isCreatorInfoEnabled, setIsCreatorInfoEnabled] = useState(false);
+  const [creatorName, setCreatorName] = useState("");
+  const [creatorWebsite, setCreatorWebsite] = useState("");
+  const [creatorTwitter, setCreatorTwitter] = useState("");
+  const [creatorWallet, setCreatorWallet] = useState("");
   const [tokenMintAddress, setTokenMintAddress] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(LoadingStep.INITIALIZING);
   const [progress, setProgress] = useState(0);
+  const [customMintPattern, setCustomMintPattern] = useState("");
+  const [customMintPatternType, setCustomMintPatternType] = useState("prefix");
+  const [mintGenProgress, setMintGenProgress] = useState({ attempts: 0, elapsed: 0, running: false });
+  const [foundMintKeypair, setFoundMintKeypair] = useState<Keypair | null>(null);
+  const loadingModalRef = useRef<HTMLDivElement>(null);
+
+  // Add new state for toggling optional blocks
+  const [isSocialLinksEnabled, setIsSocialLinksEnabled] = useState(false);
+  const [isCustomMintEnabled, setIsCustomMintEnabled] = useState(false);
+
+  // Toggle body class for loading state to control global styles
+  useEffect(() => {
+    if (isLoading) {
+      document.body.classList.add('loading-active');
+    } else {
+      document.body.classList.remove('loading-active');
+    }
+  }, [isLoading]);
 
   const FEE_RECEIVER = new PublicKey("8347h8LeaVAUzyWES3Xj2Gd6QTpGrCayKBpuYvBW3PWD");
 
@@ -81,10 +130,6 @@ export const CreateToken: FC = () => {
     const handleAffiliateLink = async () => {
       if (publicKey && ref && typeof ref === 'string' && FEATURES.ENABLE_AFFILIATE) {
         try {
-          console.log('Attempting to create affiliate link:', {
-            userWallet: publicKey.toString(),
-            affiliateWallet: ref
-          });
 
           const response = await fetch('/api/affiliate/link', {
             method: 'POST',
@@ -100,16 +145,10 @@ export const CreateToken: FC = () => {
           const data = await response.json();
           
           if (!response.ok) {
-            console.warn('Failed to create affiliate relationship:', {
-              status: response.status,
-              statusText: response.statusText,
-              data
-            });
-          } else {
-            console.log('Successfully created affiliate relationship:', data);
+            // Silent failure for affiliate relationship
           }
         } catch (error) {
-          console.error('Error creating affiliate relationship:', error);
+          // Silent failure for affiliate relationship
         }
       }
     };
@@ -154,7 +193,19 @@ export const CreateToken: FC = () => {
       return;
     }
 
-    // Validate inputs
+    // Prevent multiple submissions
+    if (isSubmitting) {
+      notify({ type: 'error', message: 'Token creation already in progress. Please wait.' });
+      return;
+    }
+
+    // Scroll to top immediately when user clicks create button
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+
+    // Validate inputs first
     const nameValidation = validateTokenName(tokenName);
     if (!nameValidation.isValid) {
       notify({ type: "error", message: nameValidation.error });
@@ -181,23 +232,136 @@ export const CreateToken: FC = () => {
       }
     }
 
+    // Validate custom mint pattern if provided
+    if (customMintPattern) {
+      const patternValidation = validateCustomMintPattern(customMintPattern);
+      if (!patternValidation.isValid) {
+        notify({ type: "error", message: patternValidation.error });
+        return;
+      }
+    }
+
+    // Handle custom mint address generation first
+    if (customMintPattern && customMintPattern.length > 0) {
+      setIsSubmitting(true);
+      setMintGenProgress({ attempts: 0, elapsed: 0, running: true });
+      
+      const start = Date.now();
+      let found = false;
+      let attempts = 0;
+      let foundCandidate = null;
+      const pattern = customMintPattern;
+      const isPrefix = customMintPatternType === "prefix";
+      
+      try {
+        const maxAttempts = 100000; // Prevent infinite loops
+        while (!found && attempts < maxAttempts) {
+          attempts++;
+          const candidate = Keypair.generate();
+          const base58 = bs58.encode(candidate.publicKey.toBytes());
+          if (
+            (isPrefix && base58.startsWith(pattern)) ||
+            (!isPrefix && base58.endsWith(pattern))
+          ) {
+            // Store the found mint keypair for later use
+            foundCandidate = candidate;
+            setFoundMintKeypair(candidate);
+            found = true;
+            break;
+          }
+          if (attempts % 100 === 0) {
+            setMintGenProgress({
+              attempts,
+              elapsed: Math.floor((Date.now() - start) / 1000),
+              running: true
+            });
+            await new Promise((resolve) => setTimeout(resolve, 0));
+          }
+        }
+        
+        if (!found) {
+          throw new Error(`Could not find a mint address with pattern "${pattern}" after ${attempts} attempts. Try a shorter pattern.`);
+        }
+        
+        setMintGenProgress({
+          attempts,
+          elapsed: Math.floor((Date.now() - start) / 1000),
+          running: false
+        });
+        
+        // Show success notification when mint address is found
+        const foundAddress = bs58.encode(foundCandidate!.publicKey.toBytes());
+        console.log('Custom mint address found:', foundAddress);
+        console.log('Pattern was:', pattern, 'Type:', isPrefix ? 'prefix' : 'suffix');
+        notify({ 
+          type: "success", 
+          message: `Custom mint address found! ${foundAddress.slice(0, 8)}...${foundAddress.slice(-8)}` 
+        });
+        
+        // Start token creation with the found custom mint keypair
+        await startTokenCreation(foundCandidate);
+        
+      } catch (error) {
+        notify({ type: "error", message: "Error generating custom mint address. Please try again." });
+        setIsSubmitting(false);
+        return;
+      }
+    } else {
+      // No custom mint pattern, start token creation directly
+      await startTokenCreation();
+    }
+  };
+
+  const startTokenCreation = async (customMintKeypair?: Keypair) => {
     setIsLoading(true);
     updateProgress(LoadingStep.INITIALIZING);
     
+    // Focus the loading modal to ensure it's visible
+    setTimeout(() => {
+      if (loadingModalRef.current) {
+        loadingModalRef.current.focus();
+      }
+    }, 200);
+    
     try {
-      // Upload metadata to IPFS
+      // Get the mint keypair (either custom or generated)
+      let mintKeypair = null;
+      if (customMintKeypair) {
+        mintKeypair = customMintKeypair;
+        console.log('Using custom mint keypair:', bs58.encode(customMintKeypair.publicKey.toBytes()));
+      } else if (foundMintKeypair) {
+        mintKeypair = foundMintKeypair;
+        console.log('Using found mint keypair:', bs58.encode(foundMintKeypair.publicKey.toBytes()));
+        setFoundMintKeypair(null); // Clean up
+      } else {
+        mintKeypair = Keypair.generate();
+        console.log('Using generated mint keypair:', bs58.encode(mintKeypair.publicKey.toBytes()));
+      }
+
+      // Upload metadata to Arweave via server-side API
       let tokenUri = "";
       try {
-        const pinata = new PinataSDK({
-          pinataJwt: process.env.NEXT_PUBLIC_PINATA_JWT
-        });
-
         let imageUri = "https://pink-abstract-gayal-682.mypinata.cloud/ipfs/bafybeigjzuiviadtrfyvvo7o6ewccb46b3kgav2yi54fuf4vjxkb53da7i";
         
         if (imageFile) {
           updateProgress(LoadingStep.UPLOADING_IMAGE);
-          const imageUploadResponse = await pinata.upload.file(imageFile);
-          imageUri = `https://ipfs.io/ipfs/${imageUploadResponse.IpfsHash}`;
+          
+          // Upload image file via server-side API
+          const imageFormData = new FormData();
+          imageFormData.append('file', imageFile);
+          
+          const imageResponse = await fetch('/api/upload-file', {
+            method: 'POST',
+            body: imageFormData
+          });
+          
+          if (!imageResponse.ok) {
+            const errorData = await imageResponse.json();
+            throw new Error(errorData.error || 'Failed to upload image');
+          }
+          
+          const imageData = await imageResponse.json();
+          imageUri = imageData.ipfsUrl;
         }
 
         const metadata = {
@@ -219,33 +383,67 @@ export const CreateToken: FC = () => {
           }
         };
 
-        // Add social links to attributes
-        if (websiteUrl || telegramUrl || xUrl) {
+        // Add creator information if provided
+        if (isCreatorInfoEnabled && (creatorName || creatorWebsite || creatorTwitter)) {
+          metadata.properties.creators = [{
+            name: creatorName || undefined,
+            website: creatorWebsite || undefined,
+            twitter: creatorTwitter || undefined
+          }];
+          
+          // Add creator info to attributes
           metadata.attributes = [
+            ...(creatorName ? [{ trait_type: "Creator", value: creatorName }] : []),
+            ...(creatorWebsite ? [{ trait_type: "Creator Website", value: creatorWebsite }] : []),
+            ...(creatorTwitter ? [{ trait_type: "Creator Twitter", value: creatorTwitter }] : []),
             ...(websiteUrl ? [{ trait_type: "Website", value: websiteUrl }] : []),
             ...(telegramUrl ? [{ trait_type: "Telegram", value: telegramUrl }] : []),
             ...(xUrl ? [{ trait_type: "Twitter", value: xUrl }] : [])
           ];
+        } else {
+          // Add social links to attributes if no creator info
+          if (websiteUrl || telegramUrl || xUrl) {
+            metadata.attributes = [
+              ...(websiteUrl ? [{ trait_type: "Website", value: websiteUrl }] : []),
+              ...(telegramUrl ? [{ trait_type: "Telegram", value: telegramUrl }] : []),
+              ...(xUrl ? [{ trait_type: "Twitter", value: xUrl }] : [])
+            ];
+          }
         }
 
-        const metadataBlob = new Blob([JSON.stringify(metadata)], { type: 'application/json' });
-        const metadataFile = new File([metadataBlob], 'metadata.json');
-        const metadataUploadResponse = await pinata.upload.file(metadataFile);
-        tokenUri = `https://ipfs.io/ipfs/${metadataUploadResponse.IpfsHash}`;
+        // Upload metadata JSON via server-side API
+        const metadataResponse = await fetch('/api/upload-ipfs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ metadata })
+        });
+        
+        if (!metadataResponse.ok) {
+          const errorData = await metadataResponse.json();
+          throw new Error(errorData.error || 'Failed to upload metadata');
+        }
+        
+        const metadataData = await metadataResponse.json();
+        tokenUri = metadataData.ipfsUrl;
       } catch (error: any) {
         throw new Error(`Failed to upload metadata: ${error.message}`);
       }
 
       // Create mint account
       updateProgress(LoadingStep.CREATING_MINT);
-      const mintKeypair = Keypair.generate();
       const lamports = await getMinimumBalanceForRentExemptMint(connection);
-      const totalCost = lamports + 5000000; // Adding extra for transaction fees
+      
+      // Calculate total cost including creation fee and transaction fee
+      const creationFeeLamports = LAMPORTS_PER_SOL * FEE_CONFIG.CREATION_FEE;
+      const estimatedTransactionFee = 5000000; // 0.005 SOL for transaction fee
+      const totalCost = lamports + creationFeeLamports + estimatedTransactionFee;
 
       // Check balance
       const balance = await connection.getBalance(publicKey);
       if (balance < totalCost) {
-        throw new Error(`Insufficient SOL balance. You need at least ${(totalCost / LAMPORTS_PER_SOL).toFixed(2)} SOL`);
+        throw new Error(`Insufficient SOL balance. You need at least ${(totalCost / LAMPORTS_PER_SOL).toFixed(3)} SOL (including 0.2 SOL creation fee and transaction costs)`);
       }
 
       // Get required addresses
@@ -266,6 +464,8 @@ export const CreateToken: FC = () => {
         PROGRAM_ID
       );
 
+      updateProgress(LoadingStep.TRANSFERRING_FEE);
+
       // Calculate mint amount if needed
       let tokenMintAmount: bigint | null = null;
       if (Number(initialMintAmount) > 0) {
@@ -282,7 +482,7 @@ export const CreateToken: FC = () => {
       // Check for affiliate
       if (FEATURES.ENABLE_AFFILIATE && publicKey) {
         try {
-          const response = await fetch(`/api/affiliate/${publicKey.toString()}/referral`);
+          const response = await makeAuthenticatedRequest(`/api/affiliate/${publicKey.toString()}/referral`);
           if (response.ok) {
             const data = await response.json();
             if (data.affiliateWallet) {
@@ -290,16 +490,38 @@ export const CreateToken: FC = () => {
               affiliateAmount = Math.floor(totalFeeLamports * FEE_CONFIG.AFFILIATE_COMMISSION);
               feeReceiverAmount = totalFeeLamports - affiliateAmount;
             }
+          } else if (response.status === 404) {
+            // No affiliate relationship found - this is normal
+          } else {
+            // Silent failure for affiliate check
           }
         } catch (error) {
-          console.error('Error processing affiliate:', error);
+          // Continue with token creation even if affiliate check fails
         }
       }
 
+      // Prepare creators array for on-chain metadata
+      let creatorWalletAddress = null;
+      if (isCreatorInfoEnabled) {
+        if (creatorWallet && creatorWallet.trim().length > 0) {
+          creatorWalletAddress = creatorWallet.trim();
+        } else if (publicKey) {
+          creatorWalletAddress = publicKey.toString();
+        }
+      }
+      
+      const creatorsArray = creatorWalletAddress 
+        ? [
+            {
+              address: new PublicKey(creatorWalletAddress),
+              verified: true,
+              share: 100
+            }
+          ]
+        : null;
+
       // Create transaction
       const tx = new Transaction();
-      const blockhashResponse = await connection.getLatestBlockhash('confirmed');
-      tx.recentBlockhash = blockhashResponse.blockhash;
       tx.feePayer = publicKey;
 
       // Add instructions
@@ -315,6 +537,7 @@ export const CreateToken: FC = () => {
 
       // Add fee transfers
       if (affiliateWallet && affiliateAmount > 0) {
+        updateProgress(LoadingStep.TRANSFERRING_COMMISSION);
         tx.add(
           SystemProgram.transfer({
             fromPubkey: publicKey,
@@ -340,6 +563,7 @@ export const CreateToken: FC = () => {
       }
 
       // Add token setup instructions
+      updateProgress(LoadingStep.INITIALIZING_MINT);
       tx.add(
         createInitializeMintInstruction(
           mintKeypair.publicKey,
@@ -350,6 +574,7 @@ export const CreateToken: FC = () => {
         )
       );
 
+      updateProgress(LoadingStep.CREATING_ATA);
       tx.add(
         createAssociatedTokenAccountInstruction(
           publicKey,
@@ -361,6 +586,8 @@ export const CreateToken: FC = () => {
         )
       );
 
+      // Add metadata instruction with proper creator verification
+      updateProgress(LoadingStep.ADDING_METADATA);
       tx.add(
         createCreateMetadataAccountV3Instruction(
           {
@@ -377,7 +604,7 @@ export const CreateToken: FC = () => {
                 symbol: tokenSymbol,
                 uri: tokenUri,
                 sellerFeeBasisPoints: 0,
-                creators: null,
+                creators: creatorsArray,
                 collection: null,
                 uses: null,
               },
@@ -432,66 +659,121 @@ export const CreateToken: FC = () => {
         }
       }
 
-      // Sign and send transaction
-      updateProgress(LoadingStep.FINALIZING);
-      tx.partialSign(mintKeypair);
+      // Add unique memo to ensure unique signature
+      tx.add(new TransactionInstruction({
+        programId: new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'),
+        keys: [],
+        data: Buffer.from(Date.now().toString()),
+      }));
 
-      // Get wallet name
-      const walletName = localStorage.getItem('walletName');
-      
-      // Check transaction size for Phantom
-      const txSize = tx.serializeMessage().length;
-      if (walletName === 'Phantom' && txSize > 1100) {
-        throw new Error('Transaction too large for Phantom Lighthouse guard');
-      }
-
-      // Send transaction
+      // Send transaction using Phantom's required signAndSendTransaction
       if (!sendTransaction) {
-        throw new Error('sendTransaction is not available');
+        throw new Error('Wallet transaction methods not available');
       }
 
-      const signature = await sendTransaction(tx, connection, {
-        skipPreflight: false,
-        preflightCommitment: 'confirmed',
-        maxRetries: 3
-      });
+      try {
+        updateProgress(LoadingStep.FINALIZING);
+        // Get a fresh blockhash right before sending
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('processed');
+        tx.recentBlockhash = blockhash;
+        tx.lastValidBlockHeight = lastValidBlockHeight;
 
-      const confirmation = await connection.confirmTransaction({
-        signature,
-        blockhash: blockhashResponse.blockhash,
-        lastValidBlockHeight: blockhashResponse.lastValidBlockHeight,
-      }, 'finalized');
+        // First sign with mintKeypair
+        tx.partialSign(mintKeypair);
 
-      if (confirmation.value.err) {
-        throw new Error("Transaction failed: " + JSON.stringify(confirmation.value.err));
-      }
+        // Use Phantom's signAndSendTransaction for compliance
+        const signature = await sendTransaction(tx, connection, {
+          skipPreflight: false,
+          preflightCommitment: 'processed',
+          maxRetries: 3
+        });
 
-      // Update affiliate earnings if applicable
-      if (affiliateWallet && affiliateAmount > 0) {
-        try {
-          const commissionAmount = affiliateAmount / LAMPORTS_PER_SOL;
-          await fetch(`/api/affiliate/${affiliateWallet.toString()}/earnings`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              amount: commissionAmount,
-              transactionId: signature,
-              timestamp: new Date().toISOString(),
-              userWallet: publicKey.toString(),
-            }),
-          });
-        } catch (error) {
-          console.error('Error updating affiliate earnings:', error);
+        // Implement robust confirmation logic with timeout
+        const confirmationTimeout = 60000;
+        const startTime = Date.now();
+        let confirmation = null;
+        let retries = 3;
+        
+        while (retries > 0 && Date.now() - startTime < confirmationTimeout) {
+          try {
+            confirmation = await connection.confirmTransaction({
+              signature,
+              blockhash,
+              lastValidBlockHeight
+            }, 'processed');
+
+            if (confirmation.value.err) {
+              throw new Error("Transaction failed: " + JSON.stringify(confirmation.value.err));
+            }
+
+            const status = await connection.getSignatureStatus(signature);
+            if (status.value?.err) {
+              throw new Error("Transaction failed after confirmation: " + JSON.stringify(status.value.err));
+            }
+
+            break;
+          } catch (error) {
+            retries--;
+            if (retries === 0 || Date.now() - startTime >= confirmationTimeout) {
+              throw new Error(`Transaction failed: ${error.message}. Please try again.`);
+            }
+            await new Promise(resolve => setTimeout(resolve, Math.min(1000 * Math.pow(2, 3 - retries), 5000)));
+          }
+        }
+
+        if (!confirmation) {
+          throw new Error("Transaction confirmation failed after all retries. Please try again.");
+        }
+
+        // Update affiliate earnings if applicable
+        if (affiliateWallet && affiliateAmount > 0) {
+          try {
+            const commissionAmount = affiliateAmount / LAMPORTS_PER_SOL;
+            const earningsResponse = await makeAuthenticatedRequest(`/api/affiliate/${affiliateWallet.toString()}/earnings`, {
+              method: 'POST',
+              body: JSON.stringify({
+                amount: commissionAmount,
+                transactionId: signature,
+                timestamp: new Date().toISOString(),
+                userWallet: publicKey.toString(),
+              }),
+            });
+            
+            if (!earningsResponse.ok) {
+              // Silent failure for affiliate earnings update
+            }
+          } catch (error) {
+            // Don't fail the token creation if affiliate earnings update fails
+          }
+        }
+
+        updateProgress(LoadingStep.COMPLETE);
+        setTokenMintAddress(mintKeypair.publicKey.toString());
+        notify({
+          type: "success",
+          message: "Token created successfully!",
+          txid: signature
+        });
+
+      } catch (error: any) {
+        
+        // Handle specific error cases
+        if (error.message?.includes("insufficient funds")) {
+          throw new Error("Insufficient SOL balance to complete the transaction");
+        } else if (error.message?.includes("blockhash")) {
+          throw new Error("Transaction expired. Please try again.");
+        } else if (error.message?.includes("too large")) {
+          throw new Error("Transaction too large. Please reduce the number of instructions.");
+        } else if (error.message?.includes("signature")) {
+          throw new Error("Transaction signing failed. Please try again.");
+        } else if (error.message?.includes("already been processed")) {
+          throw new Error("Transaction was already processed. Please check your wallet for the new token.");
+        } else if (error.message?.includes("simulation failed")) {
+          throw new Error("Transaction simulation failed. Please try again with a fresh page.");
+        } else {
+          throw new Error(`Transaction failed: ${error.message || "Unknown error"}`);
         }
       }
-
-      updateProgress(LoadingStep.COMPLETE);
-      setTokenMintAddress(mintKeypair.publicKey.toString());
-      notify({
-        type: "success",
-        message: "Token created successfully!",
-        txid: signature
-      });
 
     } catch (error: any) {
       notify({ 
@@ -502,18 +784,17 @@ export const CreateToken: FC = () => {
       console.error("Token creation error:", error);
     } finally {
       setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div>
-      {!publicKey ? (
-        <div className="bg-[#1A2332] rounded-lg p-8 text-center shadow-xl mb-8">
-          <h2 className="text-2xl font-bold text-white mb-4">Connect Your Wallet</h2>
-          <p className="text-gray-400">Please connect your wallet to create a token.</p>
-        </div>
-      ) : isLoading && (
-        <div className={styles.loadingModal}>
+    <>
+
+
+      {/* Token Creation Loading Modal - Rendered outside form structure */}
+      {isLoading && (
+        <div className={styles.loadingModal} ref={loadingModalRef}>
           <div className={styles.loadingContent}>
             <div className={styles.loadingHeader}>
               <h3 className={styles.loadingTitle}>Creating Your Token</h3>
@@ -534,278 +815,345 @@ export const CreateToken: FC = () => {
           </div>
         </div>
       )}
-      {publicKey && !tokenMintAddress && !isLoading && (
-        <div>
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Token Icon</label>
-            <div className="flex p-2">
-              <label className="m-auto rounded border border-dashed border-white px-2 cursor-pointer w-full flex flex-col items-center justify-center" style={{ minHeight: 100 }}>
-                <svg
-                  className="mx-auto h-12 w-12 text-gray-400"
-                  stroke="currentColor"
-                  fill="none"
-                  viewBox="0 0 48 48"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                    strokeWidth={2}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+
+      <div className={styles.tokenForm}>
+        {!publicKey ? (
+          <div className={styles.walletConnectCard}>
+            <div className={styles.walletIcon}>🔗</div>
+            <h2 className={styles.walletTitle}>Connect Your Wallet</h2>
+            <p className={styles.walletSubtitle}>Please connect your wallet to create a token.</p>
+          </div>
+        ) : null}
+
+        {/* Mobile Wallet Warning */}
+        {isMobile && (
+          <div className={styles.mobileWarning}>
+            <div className={styles.warningIcon}>⚠️</div>
+            <div className={styles.warningContent}>
+              <h3 className={styles.warningTitle}>Mobile Device Detected</h3>
+              <p className={styles.warningText}>
+                Currently, you&apos;ll need to use your wallet&apos;s built-in browser to connect to this dApp. 
+                We&apos;re working on implementing mobile wallet adapter support for a better mobile experience.
+              </p>
+              <p className={styles.warningSubtext}>
+                For the best experience, please use your wallet&apos;s browser or switch to a desktop device.
+              </p>
+            </div>
+          </div>
+        )}
+      
+      {publicKey && !tokenMintAddress && (
+        <div className={styles.formSections}>
+          {/* Basic Token Information */}
+          <div className={styles.formSection}>
+            <h3 className={styles.sectionTitle}>Basic Information</h3>
+            <div className={styles.imageUploadSection}>
+              <div className={styles.imagePreview}>
+                {imageFile ? (
+                  <Image 
+                    src={URL.createObjectURL(imageFile)} 
+                    alt="Token preview" 
+                    className={styles.previewImage}
+                    width={200}
+                    height={200}
                   />
-                </svg>
-                <span className="font-medium mt-2">Upload an image</span>
-                <input
-                  type="file"
-                  className="sr-only"
-                  onChange={handleImageChange}
-                />
-                {!imageFile ? null : (
-                  <p className="text-gray-500 mt-2">{imageFile.name}</p>
+                ) : (
+                  <div className={styles.uploadPlaceholder}>
+                    <div className={styles.uploadIcon}>📷</div>
+                    <p>Upload Token Image</p>
+                  </div>
                 )}
-              </label>
+                  <input
+                    type="file"
+                    onChange={handleImageChange}
+                  accept="image/*"
+                  className={styles.fileInput}
+                  />
+              </div>
+              <div className={styles.basicFields}>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Token Name</label>
+                  <input
+                    className={styles.input}
+                    type="text"
+                    value={tokenName}
+                    onChange={(e) => setTokenName(e.target.value)}
+                    placeholder="Enter token name"
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Token Symbol</label>
+                  <input
+                    className={styles.input}
+                    type="text"
+                    value={tokenSymbol}
+                    onChange={(e) => setTokenSymbol(e.target.value)}
+                    placeholder="Enter token symbol (e.g., SOL)"
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Description</label>
+                  <textarea
+                    className={`${styles.input} ${styles.textarea}`}
+                    value={tokenDescription}
+                    onChange={(e) => setTokenDescription(e.target.value)}
+                    placeholder="Describe your token"
+                  />
+                </div>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Token Name</label>
-            <input
-              className={styles.input}
-              type="text"
-              value={tokenName}
-              onChange={(e) => setTokenName(e.target.value)}
-              placeholder="Enter token name"
-            />
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Token Symbol</label>
-            <input
-              className={styles.input}
-              type="text"
-              value={tokenSymbol}
-              onChange={(e) => setTokenSymbol(e.target.value)}
-              placeholder="Enter token symbol (e.g., SOL)"
-            />
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Token Description</label>
-            <textarea
-              className={`${styles.input} ${styles.textarea}`}
-              value={tokenDescription}
-              onChange={(e) => setTokenDescription(e.target.value)}
-              placeholder="Describe your token"
-            />
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Token Decimals</label>
-            <input
-              className={styles.input}
-              type="number"
-              value={tokenDecimals}
-              onChange={(e) => setTokenDecimals(e.target.value)}
-              placeholder="Enter decimals (default: 9)"
-            />
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Initial Mint Amount</label>
-            <input
-              className={styles.input}
-              type="number"
-              value={initialMintAmount}
-              onChange={(e) => setInitialMintAmount(e.target.value)}
-              placeholder="Enter initial mint amount"
-            />
-          </div>
-
-          <div className={styles.formGroup}>
-            <button
-              type="button"
-              onClick={() => setIsSocialLinksExpanded(!isSocialLinksExpanded)}
-              className="flex items-center justify-between w-full px-4 py-2 text-sm font-medium text-left text-white bg-[#1A2332] rounded-lg hover:bg-[#2A3342] focus:outline-none focus-visible:ring focus-visible:ring-purple-500 focus-visible:ring-opacity-75"
-            >
-              <span>Social Links (Optional)</span>
-              <svg
-                className={`w-5 h-5 transform transition-transform ${isSocialLinksExpanded ? 'rotate-180' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
+          {/* Token Configuration */}
+          <div className={styles.formSection}>
+            <h3 className={styles.sectionTitle}>Token Configuration</h3>
+            <div className={styles.configGrid}>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Decimals</label>
+                  <input
+                    className={styles.input}
+                    type="number"
+                    value={tokenDecimals}
+                    onChange={(e) => setTokenDecimals(e.target.value)}
+                  placeholder="9"
+                  />
+                </div>
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Initial Supply</label>
+                  <input
+                    className={styles.input}
+                    type="number"
+                    value={initialMintAmount}
+                    onChange={(e) => setInitialMintAmount(e.target.value)}
+                  placeholder="0"
+                  />
+                </div>
+              </div>
             
-            {isSocialLinksExpanded && (
-              <div className="mt-4 space-y-4">
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Website URL</label>
-                  <input
-                    className={styles.input}
-                    type="url"
-                    value={websiteUrl}
-                    onChange={(e) => setWebsiteUrl(e.target.value)}
-                    placeholder="https://your-token-website.com"
-                  />
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Telegram URL</label>
-                  <input
-                    className={styles.input}
-                    type="url"
-                    value={telegramUrl}
-                    onChange={(e) => setTelegramUrl(e.target.value)}
-                    placeholder="https://t.me/your-token-group"
-                  />
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>X (Twitter) URL</label>
-                  <input
-                    className={styles.input}
-                    type="url"
-                    value={xUrl}
-                    onChange={(e) => setXUrl(e.target.value)}
-                    placeholder="https://x.com/your-token-handle"
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Token Configuration</label>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
-              <div 
-                className={`relative rounded-lg border-2 p-4 cursor-pointer transition-all duration-200 ${
-                  revokeMintAuthority 
-                    ? 'border-purple-500 bg-purple-500/10' 
-                    : 'border-gray-700 hover:border-purple-500/50'
-                }`}
-                onClick={() => setRevokeMintAuthority(!revokeMintAuthority)}
-              >
-                <div className="flex items-start space-x-3">
-                  <div className={`flex items-center justify-center mt-0.5`}>
-                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors duration-200 ${
-                      revokeMintAuthority ? 'border-purple-500 bg-purple-500' : 'border-gray-500 bg-[#181f2a]'
-                    }`} style={{ aspectRatio: '1/1', minWidth: '1.5rem', minHeight: '1.5rem' }}>
-                      {revokeMintAuthority && (
-                        <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-white">Revoke Mint Authority</h3>
-                    <p className="text-sm text-gray-400 mt-1">
-                      Permanently disable the ability to mint new tokens
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div 
-                className={`relative rounded-lg border-2 p-4 cursor-pointer transition-all duration-200 ${
-                  revokeFreezeAuthority 
-                    ? 'border-purple-500 bg-purple-500/10' 
-                    : 'border-gray-700 hover:border-purple-500/50'
-                }`}
-                onClick={() => setRevokeFreezeAuthority(!revokeFreezeAuthority)}
-              >
-                <div className="flex items-start space-x-3">
-                  <div className={`flex items-center justify-center mt-0.5`}>
-                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors duration-200 ${
-                      revokeFreezeAuthority ? 'border-purple-500 bg-purple-500' : 'border-gray-500 bg-[#181f2a]'
-                    }`} style={{ aspectRatio: '1/1', minWidth: '1.5rem', minHeight: '1.5rem' }}>
-                      {revokeFreezeAuthority && (
-                        <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-white">Revoke Freeze Authority</h3>
-                    <p className="text-sm text-gray-400 mt-1">
-                      Remove the ability to freeze token accounts
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div 
-                className={`relative rounded-lg border-2 p-4 cursor-pointer transition-all duration-200 ${
-                  makeMetadataImmutable 
-                    ? 'border-purple-500 bg-purple-500/10' 
-                    : 'border-gray-700 hover:border-purple-500/50'
-                }`}
-                onClick={() => setMakeMetadataImmutable(!makeMetadataImmutable)}
-              >
-                <div className="flex items-start space-x-3">
-                  <div className={`flex items-center justify-center mt-0.5`}>
-                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors duration-200 ${
-                      makeMetadataImmutable ? 'border-purple-500 bg-purple-500' : 'border-gray-500 bg-[#181f2a]'
-                    }`} style={{ aspectRatio: '1/1', minWidth: '1.5rem', minHeight: '1.5rem' }}>
-                      {makeMetadataImmutable && (
-                        <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-white">Immutable Metadata</h3>
-                    <p className="text-sm text-gray-400 mt-1">
-                      Lock token metadata permanently
-                    </p>
-                  </div>
+            <div className={styles.authorityOptions}>
+              <h4 className={styles.optionsTitle}>Authority Settings</h4>
+              <div className={styles.optionsGrid}>
+                <ModernSwitch
+                  checked={revokeMintAuthority}
+                  onChange={() => setRevokeMintAuthority(!revokeMintAuthority)}
+                  id="revoke-mint"
+                  label="Revoke Mint Authority"
+                />
+                <ModernSwitch
+                  checked={revokeFreezeAuthority}
+                  onChange={() => setRevokeFreezeAuthority(!revokeFreezeAuthority)}
+                  id="revoke-freeze"
+                  label="Revoke Freeze Authority"
+                />
+                <ModernSwitch
+                  checked={makeMetadataImmutable}
+                  onChange={() => setMakeMetadataImmutable(!makeMetadataImmutable)}
+                  id="immutable-metadata"
+                  label="Make Metadata Immutable"
+                />
                 </div>
               </div>
             </div>
-          </div>
 
-          <div className="mb-6 text-sm text-gray-400">
-            {['devnet', 'testnet'].includes(getSolanaNetwork()) && (
-              <div className="bg-yellow-200 text-yellow-900 p-2 text-center rounded mb-4">
-                Note: Phantom wallet may show a simulation error when creating a new token on devnet or testnet. This is expected and your token will still be created successfully.
+          {/* Social Links */}
+          <div className={styles.formSection}>
+            <ModernSwitch
+              checked={isSocialLinksEnabled}
+              onChange={() => setIsSocialLinksEnabled(!isSocialLinksEnabled)}
+              id="social-links"
+              label="Add Social Links"
+            />
+                {isSocialLinksEnabled && (
+              <div className={styles.socialLinksGrid}>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Website</label>
+                      <input
+                        className={styles.input}
+                        type="url"
+                        value={websiteUrl}
+                        onChange={(e) => setWebsiteUrl(e.target.value)}
+                    placeholder="https://your-website.com"
+                      />
+                    </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Telegram</label>
+                      <input
+                        className={styles.input}
+                        type="url"
+                        value={telegramUrl}
+                        onChange={(e) => setTelegramUrl(e.target.value)}
+                    placeholder="https://t.me/your-group"
+                      />
+                    </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Twitter/X</label>
+                      <input
+                        className={styles.input}
+                        type="url"
+                        value={xUrl}
+                        onChange={(e) => setXUrl(e.target.value)}
+                    placeholder="https://x.com/your-handle"
+                      />
+                    </div>
+                  </div>
+                )}
+            </div>
+
+          {/* Creator Information */}
+          <div className={styles.formSection}>
+            <ModernSwitch
+              checked={isCreatorInfoEnabled}
+              onChange={() => setIsCreatorInfoEnabled(!isCreatorInfoEnabled)}
+              id="creator-info"
+              label="Add Creator Information"
+            />
+                {isCreatorInfoEnabled && (
+              <div className={styles.creatorGrid}>
+                    <div className={styles.formGroup}>
+                      <label className={styles.label}>Creator Name</label>
+                      <input
+                        className={styles.input}
+                        type="text"
+                        value={creatorName}
+                        onChange={(e) => setCreatorName(e.target.value)}
+                    placeholder="Your name or project name"
+                      />
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label className={styles.label}>Creator Website</label>
+                      <input
+                        className={styles.input}
+                        type="url"
+                        value={creatorWebsite}
+                        onChange={(e) => setCreatorWebsite(e.target.value)}
+                    placeholder="https://your-website.com"
+                      />
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label className={styles.label}>Creator Twitter</label>
+                      <input
+                        className={styles.input}
+                        type="text"
+                        value={creatorTwitter}
+                        onChange={(e) => setCreatorTwitter(e.target.value)}
+                    placeholder="@your-handle"
+                      />
+                    </div>
+                    <div className={styles.formGroup}>
+                  <label className={styles.label}>Creator Wallet</label>
+                      <input
+                        className={styles.input}
+                        type="text"
+                        value={creatorWallet}
+                        onChange={(e) => setCreatorWallet(e.target.value)}
+                        placeholder={publicKey ? publicKey.toString() : "Enter wallet address"}
+                      />
+                    </div>
+                  </div>
+                )}
+            </div>
+
+          {/* Custom Mint Address */}
+          <div className={styles.formSection}>
+            <ModernSwitch
+              checked={isCustomMintEnabled}
+              onChange={() => setIsCustomMintEnabled(!isCustomMintEnabled)}
+              id="custom-mint"
+              label="Custom Mint Address Pattern"
+            />
+                {isCustomMintEnabled && (
+              <div className={styles.customMintGrid}>
+                <div className={styles.formGroup}>
+                  <label className={styles.label}>Pattern (max 3 characters)</label>
+                      <input
+                        className={styles.input}
+                        type="text"
+                        maxLength={3}
+                        value={customMintPattern}
+                        onChange={e => setCustomMintPattern(e.target.value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 3))}
+                    placeholder="ABC"
+                      />
+                    </div>
+                <div className={styles.formGroup}>
+                      <label className={styles.label}>Pattern Type</label>
+                      <select
+                        className={styles.input}
+                        value={customMintPatternType}
+                        onChange={e => setCustomMintPatternType(e.target.value)}
+                      >
+                        <option value="prefix">Prefix</option>
+                        <option value="suffix">Suffix</option>
+                      </select>
+                    </div>
+                      {mintGenProgress.running && (
+                  <div className={styles.mintProgressContainer}>
+                    <div className={styles.mintProgressHeader}>
+                      <span className={styles.mintProgressText}>
+                        🔍 Searching for pattern: <strong>{customMintPattern}</strong>
+                      </span>
+                      <span className={styles.mintProgressStats}>
+                        {mintGenProgress.attempts.toLocaleString()} attempts • {mintGenProgress.elapsed}s
+                      </span>
+                    </div>
+                    <div className={styles.mintProgressBar}>
+                      <div 
+                        className={styles.mintProgressFill}
+                        style={{ 
+                          width: `${Math.min((mintGenProgress.attempts / Math.pow(58, customMintPattern.length)) * 100, 100)}%` 
+                        }}
+                      />
+                    </div>
+                    <div className={styles.mintProgressTip}>
+                      💡 Tip: Shorter patterns (1-2 characters) are found much faster
+                    </div>
+                  </div>
+                      )}
+
+                  </div>
+                )}
+            </div>
+
+            {/* Create Button */}
+          <div className={styles.createSection}>
+            <div className={styles.termsText}>
+              By clicking create, you agree to our{' '}
+              <a href="/terms" className={styles.termsLink} target="_blank" rel="noopener noreferrer">
+                  Terms of Service
+                </a>
+                {' '}and{' '}
+              <a href="/privacy" className={styles.termsLink} target="_blank" rel="noopener noreferrer">
+                  Privacy Policy
+                </a>
               </div>
-            )}
-            By clicking the create token button, you state that you have read and accepted the{' '}
-            <a href="/terms" className="text-purple-400 hover:text-purple-300 underline" target="_blank" rel="noopener noreferrer">
-              Terms of Service
-            </a>
-            {' '}and{' '}
-            <a href="/privacy" className="text-purple-400 hover:text-purple-300 underline" target="_blank" rel="noopener noreferrer">
-              Privacy Policy
-            </a>
+              <button
+              className={`${styles.btn} ${styles.btnPrimary}`}
+                onClick={handleCreateToken}
+              disabled={isLoading || isSubmitting}
+              >
+                {isLoading ? "Creating..." : "Create Token (0.2 SOL fee)"}
+              </button>
+            </div>
           </div>
-
-          <button
-            className={`${styles.btn} ${styles.btnPrimary}`}
-            onClick={handleCreateToken}
-            disabled={isLoading}
-          >
-            {isLoading ? "Creating..." : "Create Token (0.2 SOL fee)"}
-          </button>
-        </div>
       )}
+      
       {publicKey && tokenMintAddress && !isLoading && (
-        <div className="mt-4 break-words">
-          <p className="font-medium">Link to your new token.</p>
+        <div className={styles.successMessage}>
+          <h3 className={styles.successTitle}>Token Created Successfully!</h3>
+          <p>Your token has been deployed to the Solana blockchain.</p>
+          <div className={styles.successAddress}>
+            <strong>Token Address:</strong> {tokenMintAddress}
+          </div>
           <a
-            className="cursor-pointer font-medium text-purple-500 hover:text-indigo-500"
+            className={styles.successLink}
             href={`https://explorer.solana.com/address/${tokenMintAddress}?cluster=${getSolanaNetwork()}`}
             target="_blank"
             rel="noreferrer"
           >
-            {tokenMintAddress}
+            View on Explorer →
           </a>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };

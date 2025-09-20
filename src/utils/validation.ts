@@ -71,4 +71,21 @@ export const validateTokenDescription = (description: string): ValidationResult 
     return { isValid: false, error: `Description must be less than ${TOKEN_LIMITS.MAX_DESCRIPTION_LENGTH} characters` };
   }
   return { isValid: true };
+};
+
+export const validateCustomMintPattern = (pattern: string): ValidationResult => {
+  if (!pattern) {
+    return { isValid: true }; // Optional field
+  }
+  if (pattern.length > 3) {
+    return { isValid: false, error: 'Custom mint pattern cannot exceed 3 characters' };
+  }
+  if (pattern.length < 1) {
+    return { isValid: false, error: 'Custom mint pattern must be at least 1 character' };
+  }
+  // Only allow alphanumeric characters (case sensitive)
+  if (!/^[A-Za-z0-9]+$/.test(pattern)) {
+    return { isValid: false, error: 'Custom mint pattern can only contain letters and numbers' };
+  }
+  return { isValid: true };
 }; 

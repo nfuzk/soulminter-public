@@ -1,7 +1,9 @@
 import { FC, useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import { useAutoConnect } from "../contexts/AutoConnectProvider";
+import { useCookieConsent } from "../contexts/CookieConsentContext";
 import { GearIcon, HamburgerMenuIcon } from "@radix-ui/react-icons";
 import { useConnection } from "@solana/wallet-adapter-react";
 import { useWallet } from "@solana/wallet-adapter-react";
@@ -9,6 +11,7 @@ import styles from '../views/home/styles.module.css';
 
 export const AppBar: FC = () => {
   const { autoConnect, setAutoConnect } = useAutoConnect();
+  const { showSettings } = useCookieConsent();
   const [mounted, setMounted] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { connection } = useConnection();
@@ -26,7 +29,7 @@ export const AppBar: FC = () => {
     <div className="navbar bg-[#0F1624] text-white shadow-lg">
       <div className="flex-1">
         <Link href="/" className="btn btn-ghost normal-case flex items-center">
-          <img src="https://pink-abstract-gayal-682.mypinata.cloud/ipfs/bafybeieue5otjvplqi2exrkdaxwdmjwsa2c7obiheim4wilcj6tleq63n4" alt="SoulMinter Logo" style={{ height: '2.2rem', width: '2.2rem', marginRight: '0.5rem', borderRadius: '0.3rem' }} />
+          <Image src="https://pink-abstract-gayal-682.mypinata.cloud/ipfs/bafybeieue5otjvplqi2exrkdaxwdmjwsa2c7obiheim4wilcj6tleq63n4" alt="SoulMinter Logo" width={35} height={35} style={{ marginRight: '0.5rem', borderRadius: '0.3rem' }} />
           <span className={styles.title} style={{fontSize: '1.5rem', marginBottom: 0, fontWeight: 700}}>SoulMinter</span>
         </Link>
       </div>
@@ -59,6 +62,14 @@ export const AppBar: FC = () => {
                   />
                 </label>
               </div>
+            </li>
+            <li>
+              <button 
+                onClick={showSettings}
+                className="btn btn-ghost w-full justify-start text-white hover:bg-gray-700"
+              >
+                🍪 Cookie Settings
+              </button>
             </li>
           </ul>
         </div>
@@ -104,6 +115,17 @@ export const AppBar: FC = () => {
                       />
                     </label>
                   </div>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => {
+                      showSettings();
+                      setMenuOpen(false);
+                    }}
+                    className="btn btn-ghost w-full justify-start text-white hover:bg-gray-700"
+                  >
+                    🍪 Cookie Settings
+                  </button>
                 </li>
               </ul>
             </div>

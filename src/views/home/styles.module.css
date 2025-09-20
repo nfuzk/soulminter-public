@@ -143,6 +143,68 @@
     box-shadow: 0 0 15px rgba(20, 241, 149, 0.5);
 }
 
+/* Mobile Warning Styles */
+.mobileWarningSection {
+    padding: 40px 0;
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.05) 0%, rgba(255, 152, 0, 0.05) 100%);
+}
+
+.mobileWarning {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 152, 0, 0.1) 100%);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    border-radius: 16px;
+    padding: 25px;
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    animation: slideInDown 0.5s ease-out;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.warningIcon {
+    font-size: 2rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.warningContent {
+    flex: 1;
+}
+
+.warningTitle {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #FFC107;
+    margin-bottom: 12px;
+    font-family: 'Orbitron', sans-serif;
+}
+
+.warningText {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 10px;
+    line-height: 1.6;
+}
+
+.warningSubtext {
+    font-size: 0.95rem;
+    color: rgba(255, 193, 7, 0.8);
+    font-style: italic;
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .features {
     padding: 100px 0;
     background-color: var(--darker-bg);
@@ -150,7 +212,7 @@
     overflow: hidden;
 }
 
-.features h3 {
+.features h2 {
     text-align: center;
     font-size: clamp(1.8rem, 3vw, 2.5rem);
     margin-bottom: 2rem;
@@ -224,7 +286,7 @@
     position: relative;
 }
 
-.howItWorks h3 {
+.howItWorks h2 {
     text-align: center;
     font-size: clamp(1.8rem, 3vw, 2.5rem);
     margin-bottom: 2rem;
@@ -290,7 +352,7 @@
     text-align: center;
 }
 
-.affiliate h3 {
+.affiliate h2 {
     font-size: clamp(1.8rem, 3vw, 2.5rem);
     margin-bottom: 1.5rem;
     background: var(--gradient-primary);

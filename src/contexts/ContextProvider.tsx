@@ -5,6 +5,7 @@ import {
   useWallet,
 } from "@solana/wallet-adapter-react";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
+import { PhantomWalletAdapter } from "@solana/wallet-adapter-wallets";
 import { clusterApiUrl } from "@solana/web3.js";
 import { FC, ReactNode, useCallback, useMemo, useEffect } from "react";
 import { AutoConnectProvider, useAutoConnect } from "./AutoConnectProvider";
@@ -25,10 +26,20 @@ const WalletStateResetter: FC = () => {
 const WalletContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const { autoConnect } = useAutoConnect();
   const network = getSolanaNetwork() as WalletAdapterNetwork;
+  
+  // Configure wallets
+  const wallets = useMemo(
+    () => [
+      new PhantomWalletAdapter(),
+    ],
+    []
+  );
   const endpoint = useMemo(
     () => {
+      // Use public RPC endpoints for wallet connection
+      // Actual RPC calls will go through our secure proxy
       if (network === WalletAdapterNetwork.Mainnet) {
-        return `https://mainnet.helius-rpc.com/?api-key=${process.env.NEXT_PUBLIC_HELIUS_API_KEY}`;
+        return "https://api.mainnet-beta.solana.com";
       } else if (network === WalletAdapterNetwork.Devnet) {
         return "https://api.devnet.solana.com";
       } else if (network === WalletAdapterNetwork.Testnet) {
@@ -68,7 +79,7 @@ const WalletContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
   return (
     <ConnectionProvider endpoint={endpoint}>
       <WalletProvider
-        wallets={[]}
+        wallets={wallets}
         onError={onError}
         autoConnect={autoConnect}
       >
