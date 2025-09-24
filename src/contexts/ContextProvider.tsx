@@ -36,16 +36,19 @@ const WalletContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
   );
   const endpoint = useMemo(
     () => {
-      // Use public RPC endpoints for wallet connection
-      // Actual RPC calls will go through our secure proxy
+      // Use Helius RPC endpoints for wallet connections
+      // All RPC calls go through our secure proxy with Helius API key
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                     (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+      
       if (network === WalletAdapterNetwork.Mainnet) {
-        return "https://api.mainnet-beta.solana.com";
+        return `${baseUrl}/api/wallet-rpc?network=mainnet-beta`; // Use our Helius proxy for mainnet
       } else if (network === WalletAdapterNetwork.Devnet) {
-        return "https://api.devnet.solana.com";
+        return `${baseUrl}/api/wallet-rpc?network=devnet`; // Use our Helius proxy for devnet
       } else if (network === WalletAdapterNetwork.Testnet) {
-        return "https://api.testnet.solana.com";
+        return `${baseUrl}/api/wallet-rpc?network=testnet`; // Use our Helius proxy for testnet
       } else {
-        return clusterApiUrl(network);
+        return `${baseUrl}/api/wallet-rpc?network=mainnet-beta`; // Default to mainnet
       }
     },
     [network],

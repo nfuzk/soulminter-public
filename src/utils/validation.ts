@@ -77,8 +77,8 @@ export const validateCustomMintPattern = (pattern: string): ValidationResult => 
   if (!pattern) {
     return { isValid: true }; // Optional field
   }
-  if (pattern.length > 3) {
-    return { isValid: false, error: 'Custom mint pattern cannot exceed 3 characters' };
+  if (pattern.length > 2) {
+    return { isValid: false, error: 'Custom mint pattern cannot exceed 2 characters' };
   }
   if (pattern.length < 1) {
     return { isValid: false, error: 'Custom mint pattern must be at least 1 character' };

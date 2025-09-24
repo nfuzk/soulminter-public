@@ -8,10 +8,40 @@ const ALLOWED_METHODS = [
   'getTokenAccountsByOwner',
   'getProgramAccounts',
   'getRecentBlockhash',
+  'getLatestBlockhash',
   'getBlockHeight',
   'getTransaction',
   'getSignaturesForAddress',
-  'getTokenAccountBalance'
+  'getTokenAccountBalance',
+  'confirmTransaction',
+  'getSignatureStatus',
+  'getSignatureStatuses',
+  'getMinimumBalanceForRentExemption',
+  'getSlot',
+  'getVersion',
+  'getHealth',
+  'getClusterNodes',
+  'getEpochInfo',
+  'getEpochSchedule',
+  'getGenesisHash',
+  'getIdentity',
+  'getInflationGovernor',
+  'getInflationRate',
+  'getInflationReward',
+  'getLargestAccounts',
+  'getLeaderSchedule',
+  'getMultipleAccounts',
+  'getProgramAccounts',
+  'getRecentPerformanceSamples',
+  'getStakeActivation',
+  'getStakeMinimumDelegation',
+  'getSupply',
+  'getTokenLargestAccounts',
+  'getTokenSupply',
+  'getVoteAccounts',
+  'requestAirdrop',
+  'simulateTransaction',
+  'sendTransaction'
 ];
 
 async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -32,23 +62,23 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     // Get the appropriate RPC endpoint based on network
-    const network = req.headers['x-solana-network'] as string || 'devnet';
-    let rpcUrl: string;
-
-    if (network === 'mainnet-beta') {
-      // Use Helius API key on server-side only
-      const apiKey = process.env.HELIUS_API_KEY; // No NEXT_PUBLIC_ prefix
-      if (!apiKey) {
-        return res.status(500).json({ error: 'RPC configuration error' });
-      }
-      rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${apiKey}`;
-    } else if (network === 'devnet') {
-      rpcUrl = 'https://api.devnet.solana.com';
-    } else if (network === 'testnet') {
-      rpcUrl = 'https://api.testnet.solana.com';
-    } else {
-      return res.status(400).json({ error: 'Invalid network' });
-    }
+     const network = req.headers['x-solana-network'] as string || 'mainnet-beta';
+     
+     // Get Helius API key
+     const apiKey = process.env.HELIUS_API_KEY;
+     if (!apiKey) {
+       return res.status(500).json({ error: 'RPC configuration error' });
+     }
+     
+     // Use Helius for both mainnet and devnet
+     let rpcUrl: string;
+     if (network === 'mainnet-beta') {
+       rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${apiKey}`;
+     } else if (network === 'devnet') {
+       rpcUrl = `https://devnet.helius-rpc.com/?api-key=${apiKey}`;
+     } else {
+       return res.status(400).json({ error: 'Only mainnet-beta and devnet networks allowed for token creation' });
+     }
 
     // Forward the RPC request to Solana
     const response = await fetch(rpcUrl, {

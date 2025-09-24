@@ -29,9 +29,9 @@ class MyDocument extends Document {
           <link rel="preconnect" href="https://pink-abstract-gayal-682.mypinata.cloud" />
           
           {/* DNS prefetch for better performance */}
-          <link rel="dns-prefetch" href="//api.mainnet-beta.solana.com" />
-          <link rel="dns-prefetch" href="//api.devnet.solana.com" />
-          <link rel="dns-prefetch" href="//api.testnet.solana.com" />
+          <link rel="dns-prefetch" href="//mainnet.helius-rpc.com" />
+          <link rel="dns-prefetch" href="//devnet.helius-rpc.com" />
+          <link rel="dns-prefetch" href="//testnet.helius-rpc.com" />
           
           {/* Additional meta tags for better SEO */}
           <meta name="format-detection" content="telephone=no" />

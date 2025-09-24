@@ -8,6 +8,7 @@ import {
   LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
 import { useSimpleWalletAuth } from '../hooks/useSimpleWalletAuth';
+import { useSecureRPC } from '../hooks/useSecureRPC';
 import {
   MINT_SIZE,
   TOKEN_PROGRAM_ID,
@@ -78,6 +79,7 @@ export const CreateToken: FC = () => {
   const { connection } = useConnection();
   const { publicKey, sendTransaction } = useWallet();
   const { makeAuthenticatedRequest } = useSimpleWalletAuth();
+  const secureRPC = useSecureRPC();
   const router = useRouter();
   const { ref } = router.query;
   const isMobile = useMobileDetection();
@@ -254,8 +256,7 @@ export const CreateToken: FC = () => {
       const isPrefix = customMintPatternType === "prefix";
       
       try {
-        const maxAttempts = 100000; // Prevent infinite loops
-        while (!found && attempts < maxAttempts) {
+        while (!found) {
           attempts++;
           const candidate = Keypair.generate();
           const base58 = bs58.encode(candidate.publicKey.toBytes());
@@ -277,10 +278,6 @@ export const CreateToken: FC = () => {
             });
             await new Promise((resolve) => setTimeout(resolve, 0));
           }
-        }
-        
-        if (!found) {
-          throw new Error(`Could not find a mint address with pattern "${pattern}" after ${attempts} attempts. Try a shorter pattern.`);
         }
         
         setMintGenProgress({
@@ -441,7 +438,7 @@ export const CreateToken: FC = () => {
       const totalCost = lamports + creationFeeLamports + estimatedTransactionFee;
 
       // Check balance
-      const balance = await connection.getBalance(publicKey);
+      const balance = await secureRPC.getBalance(publicKey.toString());
       if (balance < totalCost) {
         throw new Error(`Insufficient SOL balance. You need at least ${(totalCost / LAMPORTS_PER_SOL).toFixed(3)} SOL (including 0.2 SOL creation fee and transaction costs)`);
       }
@@ -674,7 +671,7 @@ export const CreateToken: FC = () => {
       try {
         updateProgress(LoadingStep.FINALIZING);
         // Get a fresh blockhash right before sending
-        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('processed');
+        const { blockhash, lastValidBlockHeight } = await secureRPC.getLatestBlockhash('processed');
         tx.recentBlockhash = blockhash;
         tx.lastValidBlockHeight = lastValidBlockHeight;
 
@@ -688,41 +685,27 @@ export const CreateToken: FC = () => {
           maxRetries: 3
         });
 
-        // Implement robust confirmation logic with timeout
+        // Wait for confirmation using getSignatureStatuses loop
         const confirmationTimeout = 60000;
         const startTime = Date.now();
-        let confirmation = null;
-        let retries = 3;
-        
-        while (retries > 0 && Date.now() - startTime < confirmationTimeout) {
+        let status = null;
+        while (Date.now() - startTime < confirmationTimeout) {
           try {
-            confirmation = await connection.confirmTransaction({
-              signature,
-              blockhash,
-              lastValidBlockHeight
-            }, 'processed');
-
-            if (confirmation.value.err) {
-              throw new Error("Transaction failed: " + JSON.stringify(confirmation.value.err));
+            const statusResp = await secureRPC.getSignatureStatuses([signature]);
+            status = statusResp && statusResp.value && statusResp.value[0];
+            if (status && status.confirmationStatus === 'finalized') {
+              if (status.err) {
+                throw new Error('Transaction failed: ' + JSON.stringify(status.err));
+              }
+              break;
             }
-
-            const status = await connection.getSignatureStatus(signature);
-            if (status.value?.err) {
-              throw new Error("Transaction failed after confirmation: " + JSON.stringify(status.value.err));
-            }
-
-            break;
-          } catch (error) {
-            retries--;
-            if (retries === 0 || Date.now() - startTime >= confirmationTimeout) {
-              throw new Error(`Transaction failed: ${error.message}. Please try again.`);
-            }
-            await new Promise(resolve => setTimeout(resolve, Math.min(1000 * Math.pow(2, 3 - retries), 5000)));
+          } catch (e) {
+            // continue polling
           }
+          await new Promise(res => setTimeout(res, 2000));
         }
-
-        if (!confirmation) {
-          throw new Error("Transaction confirmation failed after all retries. Please try again.");
+        if (!status || status.confirmationStatus !== 'finalized') {
+          throw new Error('Transaction confirmation timed out.');
         }
 
         // Update affiliate earnings if applicable
@@ -1063,17 +1046,17 @@ export const CreateToken: FC = () => {
             />
                 {isCustomMintEnabled && (
               <div className={styles.customMintGrid}>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Pattern (max 3 characters)</label>
-                      <input
-                        className={styles.input}
-                        type="text"
-                        maxLength={3}
-                        value={customMintPattern}
-                        onChange={e => setCustomMintPattern(e.target.value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 3))}
-                    placeholder="ABC"
-                      />
-                    </div>
+                 <div className={styles.formGroup}>
+                   <label className={styles.label}>Pattern (max 2 characters)</label>
+                       <input
+                         className={styles.input}
+                         type="text"
+                         maxLength={2}
+                         value={customMintPattern}
+                         onChange={e => setCustomMintPattern(e.target.value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2))}
+                     placeholder="AB"
+                       />
+                     </div>
                 <div className={styles.formGroup}>
                       <label className={styles.label}>Pattern Type</label>
                       <select

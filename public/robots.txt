@@ -3,6 +3,7 @@ User-agent: *
 Allow: /
 Disallow: /api/*
 Disallow: /private/*
+Disallow: /404
 
 # Host
 Host: https://soulminter.io
