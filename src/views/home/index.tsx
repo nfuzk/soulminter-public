@@ -124,7 +124,7 @@ export const HomeView: FC = ({}) => {
                 className={`${styles.featureItem} ${visibleItems.has('feature-3') ? styles.featureItemVisible : ''}`}
               >
                 <h4><span className={styles.icon}>🎯</span> Earn While You Share</h4>
-                <p>Join our affiliate program and earn 50% commission (0.1 SOL) for every successful referral. Turn your network into passive income.</p>
+                <p>Join our affiliate program and earn 50% commission (0.1 SOL) for every successful referral. <strong>You earn commissions FOREVER - no expiration, no time limits!</strong> Turn your network into passive income.</p>
               </div>
               <div 
                 className={`${styles.featureItem} ${visibleItems.has('feature-4') ? styles.featureItemVisible : ''}`}
@@ -167,7 +167,7 @@ export const HomeView: FC = ({}) => {
             <h2>Join Our Affiliate Program</h2>
             <p>
               Share SoulMinter and earn! Get 50% commission (0.1 SOL) for every token created
-              through your unique referral link. Help others launch their projects and get rewarded.
+              through your unique referral link. <strong>You earn commissions FOREVER - no expiration, no time limits!</strong> Help others launch their projects and get rewarded for life.
             </p>
             <button 
               className={`${styles.btn} ${styles.btnSecondary}`}

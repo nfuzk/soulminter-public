@@ -80,7 +80,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
        return res.status(400).json({ error: 'Only mainnet-beta and devnet networks allowed for token creation' });
      }
 
-    // Forward the RPC request to Solana
+    // Forward the RPC request to Solana with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
     const response = await fetch(rpcUrl, {
       method: 'POST',
       headers: {
@@ -91,14 +94,26 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         id: 1,
         method,
         params
-      })
+      }),
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
 
     const data = await response.json();
     
     return res.status(200).json(data);
-  } catch (error) {
+  } catch (error: any) {
     console.error('RPC proxy error:', error);
+    
+    // Handle specific timeout errors
+    if (error.name === 'AbortError') {
+      return res.status(408).json({ 
+        error: 'RPC request timeout',
+        details: 'The request took too long to complete'
+      });
+    }
+    
     return res.status(500).json({ 
       error: 'RPC request failed',
       details: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -106,8 +121,16 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 }
 
-// Apply rate limiting
-const rateLimitedHandler = createRateLimit(rateLimitConfigs.data)(handler);
+// Apply stricter rate limiting for getSignatureStatuses to prevent spam
+const rateLimitedHandler = createRateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  maxRequests: 30, // 30 requests per minute (reduced from 60)
+  keyGenerator: (req) => {
+    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown';
+    const method = req.body?.method || 'unknown';
+    return `${method}:${ip}`;
+  }
+})(handler);
 
 export default rateLimitedHandler;
 

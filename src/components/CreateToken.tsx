@@ -75,13 +75,43 @@ const ModernSwitch = ({ checked, onChange, id, label }) => (
   </div>
 );
 
+// Helper to send transaction with simulation first, then fallback without preflight if simulation fails
+async function sendWithFallback(secureRPC: any, rawTxBase64: string) {
+  try {
+    return await secureRPC.sendTransaction(rawTxBase64, {
+      encoding: 'base64',
+      skipPreflight: false, // first try with simulation
+      preflightCommitment: 'processed',
+      maxRetries: 3, // Allow retries for mainnet
+    });
+  } catch (err: any) {
+    const msg: string = err?.message || '';
+    if (
+      msg.includes('simulation failed') ||
+      msg.includes('already been processed') ||
+      msg.includes('Transaction was previously processed') ||
+      msg.includes('Blockhash not found') ||
+      msg.includes('Transaction expired')
+    ) {
+      console.warn('sendWithFallback: simulation failed, retrying without preflight');
+      // retry once without simulation with more retries
+      return await secureRPC.sendTransaction(rawTxBase64, {
+        encoding: 'base64',
+        skipPreflight: true,
+        preflightCommitment: 'processed',
+        maxRetries: 5, // More retries for mainnet
+      });
+    }
+    throw err;
+  }
+}
+
 export const CreateToken: FC = () => {
   const { connection } = useConnection();
-  const { publicKey, sendTransaction } = useWallet();
+  const { publicKey, signTransaction } = useWallet();
   const { makeAuthenticatedRequest } = useSimpleWalletAuth();
   const secureRPC = useSecureRPC();
   const router = useRouter();
-  const { ref } = router.query;
   const isMobile = useMobileDetection();
 
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -112,6 +142,7 @@ export const CreateToken: FC = () => {
   const [mintGenProgress, setMintGenProgress] = useState({ attempts: 0, elapsed: 0, running: false });
   const [foundMintKeypair, setFoundMintKeypair] = useState<Keypair | null>(null);
   const loadingModalRef = useRef<HTMLDivElement>(null);
+  const transactionLockRef = useRef<boolean>(false);
 
   // Add new state for toggling optional blocks
   const [isSocialLinksEnabled, setIsSocialLinksEnabled] = useState(false);
@@ -128,35 +159,6 @@ export const CreateToken: FC = () => {
 
   const FEE_RECEIVER = new PublicKey("8347h8LeaVAUzyWES3Xj2Gd6QTpGrCayKBpuYvBW3PWD");
 
-  useEffect(() => {
-    const handleAffiliateLink = async () => {
-      if (publicKey && ref && typeof ref === 'string' && FEATURES.ENABLE_AFFILIATE) {
-        try {
-
-          const response = await fetch('/api/affiliate/link', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              userWallet: publicKey.toString(),
-              affiliateWallet: ref,
-            }),
-          });
-
-          const data = await response.json();
-          
-          if (!response.ok) {
-            // Silent failure for affiliate relationship
-          }
-        } catch (error) {
-          // Silent failure for affiliate relationship
-        }
-      }
-    };
-
-    handleAffiliateLink();
-  }, [publicKey, ref]);
 
   const updateProgress = (step: string) => {
     const steps = Object.values(LoadingStep);
@@ -195,11 +197,15 @@ export const CreateToken: FC = () => {
       return;
     }
 
-    // Prevent multiple submissions
-    if (isSubmitting) {
+    // Prevent multiple submissions - check both state and ref lock
+    if (isSubmitting || transactionLockRef.current) {
       notify({ type: 'error', message: 'Token creation already in progress. Please wait.' });
       return;
     }
+    
+    // Set submitting state and lock immediately to prevent race conditions
+    setIsSubmitting(true);
+    transactionLockRef.current = true;
 
     // Scroll to top immediately when user clicks create button
     window.scrollTo({
@@ -207,40 +213,58 @@ export const CreateToken: FC = () => {
       behavior: 'smooth'
     });
 
-    // Validate inputs first
-    const nameValidation = validateTokenName(tokenName);
-    if (!nameValidation.isValid) {
-      notify({ type: "error", message: nameValidation.error });
-      return;
-    }
-
-    const symbolValidation = validateTokenSymbol(tokenSymbol);
-    if (!symbolValidation.isValid) {
-      notify({ type: "error", message: symbolValidation.error });
-      return;
-    }
-
-    const decimalsValidation = validateTokenDecimals(tokenDecimals);
-    if (!decimalsValidation.isValid) {
-      notify({ type: "error", message: decimalsValidation.error });
-      return;
-    }
-
-    if (initialMintAmount) {
-      const supplyValidation = validateInitialSupply(initialMintAmount);
-      if (!supplyValidation.isValid) {
-        notify({ type: "error", message: supplyValidation.error });
+    try {
+      // Validate inputs first
+      const nameValidation = validateTokenName(tokenName);
+      if (!nameValidation.isValid) {
+        notify({ type: "error", message: nameValidation.error });
+        setIsSubmitting(false);
+        transactionLockRef.current = false;
         return;
       }
-    }
 
-    // Validate custom mint pattern if provided
-    if (customMintPattern) {
-      const patternValidation = validateCustomMintPattern(customMintPattern);
-      if (!patternValidation.isValid) {
-        notify({ type: "error", message: patternValidation.error });
+      const symbolValidation = validateTokenSymbol(tokenSymbol);
+      if (!symbolValidation.isValid) {
+        notify({ type: "error", message: symbolValidation.error });
+        setIsSubmitting(false);
+        transactionLockRef.current = false;
         return;
       }
+
+      const decimalsValidation = validateTokenDecimals(tokenDecimals);
+      if (!decimalsValidation.isValid) {
+        notify({ type: "error", message: decimalsValidation.error });
+        setIsSubmitting(false);
+        transactionLockRef.current = false;
+        return;
+      }
+
+      if (initialMintAmount) {
+        const supplyValidation = validateInitialSupply(initialMintAmount);
+        if (!supplyValidation.isValid) {
+          notify({ type: "error", message: supplyValidation.error });
+          setIsSubmitting(false);
+          transactionLockRef.current = false;
+          return;
+        }
+      }
+
+      // Validate custom mint pattern if provided
+      if (customMintPattern) {
+        const patternValidation = validateCustomMintPattern(customMintPattern);
+        if (!patternValidation.isValid) {
+          notify({ type: "error", message: patternValidation.error });
+          setIsSubmitting(false);
+          transactionLockRef.current = false;
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Validation error:', error);
+      notify({ type: "error", message: "Validation failed. Please try again." });
+      setIsSubmitting(false);
+      transactionLockRef.current = false;
+      return;
     }
 
     // Handle custom mint address generation first
@@ -309,7 +333,7 @@ export const CreateToken: FC = () => {
     }
   };
 
-  const startTokenCreation = async (customMintKeypair?: Keypair) => {
+  const startTokenCreation = async (customMintKeypair?: Keypair, retryCount = 0) => {
     setIsLoading(true);
     updateProgress(LoadingStep.INITIALIZING);
     
@@ -657,119 +681,204 @@ export const CreateToken: FC = () => {
       }
 
       // Add unique memo to ensure unique signature
+      // Use a combination of timestamp, random number, mint address, and user wallet for maximum uniqueness
+      const transactionId = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}-${mintKeypair.publicKey.toString().slice(0, 8)}-${publicKey.toString().slice(0, 8)}`;
       tx.add(new TransactionInstruction({
         programId: new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'),
         keys: [],
-        data: Buffer.from(Date.now().toString()),
+        data: Buffer.from(transactionId),
       }));
 
+      // Begin transaction send & confirmation block
+      let signature: string; // Declare signature in broader scope
+      try {
+        updateProgress(LoadingStep.FINALIZING);
+        
+        // Add a small delay to ensure transaction uniqueness, especially on devnet
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Get a fresh blockhash right before sending
+        const { blockhash, lastValidBlockHeight } = await secureRPC.getLatestBlockhash('processed');
+      tx.recentBlockhash = blockhash;
+      tx.lastValidBlockHeight = lastValidBlockHeight;
+
+      // First sign with mintKeypair
+      tx.partialSign(mintKeypair);
+
       // Send transaction using Phantom's required signAndSendTransaction
-      if (!sendTransaction) {
+      if (!signTransaction) {
         throw new Error('Wallet transaction methods not available');
       }
 
-      try {
-        updateProgress(LoadingStep.FINALIZING);
-        // Get a fresh blockhash right before sending
-        const { blockhash, lastValidBlockHeight } = await secureRPC.getLatestBlockhash('processed');
-        tx.recentBlockhash = blockhash;
-        tx.lastValidBlockHeight = lastValidBlockHeight;
+      const signedTx = await signTransaction(tx);
+      const rawTx = signedTx.serialize().toString('base64');
 
-        // First sign with mintKeypair
-        tx.partialSign(mintKeypair);
+      // Send via secure RPC to Helius avoiding wallet adapter sendTransaction issues
+      // Add timeout to prevent hanging transactions - increased for mainnet
+      const sendTransactionPromise = sendWithFallback(secureRPC, rawTx);
+      
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Transaction send timeout')), 60000); // 60 second timeout for mainnet
+      });
+      
+      signature = await Promise.race([sendTransactionPromise, timeoutPromise]);
 
-        // Use Phantom's signAndSendTransaction for compliance
-        const signature = await sendTransaction(tx, connection, {
-          skipPreflight: false,
-          preflightCommitment: 'processed',
-          maxRetries: 3
-        });
-
-        // Wait for confirmation using getSignatureStatuses loop
-        const confirmationTimeout = 60000;
-        const startTime = Date.now();
-        let status = null;
-        while (Date.now() - startTime < confirmationTimeout) {
-          try {
-            const statusResp = await secureRPC.getSignatureStatuses([signature]);
-            status = statusResp && statusResp.value && statusResp.value[0];
-            if (status && status.confirmationStatus === 'finalized') {
-              if (status.err) {
-                throw new Error('Transaction failed: ' + JSON.stringify(status.err));
-              }
+      // Wait for confirmation using getSignatureStatuses loop with improved logic
+      const confirmationTimeout = 120000; // 2 minutes for mainnet
+      const startTime = Date.now();
+      let status = null;
+      let lastError = null;
+      let consecutiveErrors = 0;
+      const maxConsecutiveErrors = 5; // Stop after 5 consecutive errors
+      
+      while (Date.now() - startTime < confirmationTimeout && consecutiveErrors < maxConsecutiveErrors) {
+        try {
+          const statusResp = await secureRPC.getSignatureStatuses([signature]);
+          status = statusResp && statusResp.value && statusResp.value[0];
+          consecutiveErrors = 0; // Reset error counter on successful request
+          
+          if (status) {
+            if (status.err) {
+              throw new Error('Transaction failed: ' + JSON.stringify(status.err));
+            }
+            // Accept both 'finalized' and 'confirmed' for better reliability
+            if (status.confirmationStatus === 'finalized' || status.confirmationStatus === 'confirmed') {
               break;
             }
-          } catch (e) {
-            // continue polling
           }
-          await new Promise(res => setTimeout(res, 2000));
-        }
-        if (!status || status.confirmationStatus !== 'finalized') {
-          throw new Error('Transaction confirmation timed out.');
-        }
-
-        // Update affiliate earnings if applicable
-        if (affiliateWallet && affiliateAmount > 0) {
-          try {
-            const commissionAmount = affiliateAmount / LAMPORTS_PER_SOL;
-            const earningsResponse = await makeAuthenticatedRequest(`/api/affiliate/${affiliateWallet.toString()}/earnings`, {
-              method: 'POST',
-              body: JSON.stringify({
-                amount: commissionAmount,
-                transactionId: signature,
-                timestamp: new Date().toISOString(),
-                userWallet: publicKey.toString(),
-              }),
-            });
-            
-            if (!earningsResponse.ok) {
-              // Silent failure for affiliate earnings update
-            }
-          } catch (error) {
-            // Don't fail the token creation if affiliate earnings update fails
+        } catch (e) {
+          lastError = e;
+          consecutiveErrors++;
+          console.warn(`Status check failed (${consecutiveErrors}/${maxConsecutiveErrors}), retrying...`, e);
+          
+          // If we've hit too many consecutive errors, break early
+          if (consecutiveErrors >= maxConsecutiveErrors) {
+            console.error('Too many consecutive RPC errors, stopping confirmation polling');
+            break;
           }
         }
-
-        updateProgress(LoadingStep.COMPLETE);
-        setTokenMintAddress(mintKeypair.publicKey.toString());
-        notify({
-          type: "success",
-          message: "Token created successfully!",
-          txid: signature
-        });
-
-      } catch (error: any) {
         
-        // Handle specific error cases
-        if (error.message?.includes("insufficient funds")) {
-          throw new Error("Insufficient SOL balance to complete the transaction");
-        } else if (error.message?.includes("blockhash")) {
-          throw new Error("Transaction expired. Please try again.");
-        } else if (error.message?.includes("too large")) {
-          throw new Error("Transaction too large. Please reduce the number of instructions.");
-        } else if (error.message?.includes("signature")) {
-          throw new Error("Transaction signing failed. Please try again.");
-        } else if (error.message?.includes("already been processed")) {
-          throw new Error("Transaction was already processed. Please check your wallet for the new token.");
-        } else if (error.message?.includes("simulation failed")) {
-          throw new Error("Transaction simulation failed. Please try again with a fresh page.");
+        // Progressive backoff: start with 2s, increase to 5s
+        const elapsed = Date.now() - startTime;
+        const delay = elapsed < 30000 ? 2000 : 5000;
+        await new Promise(res => setTimeout(res, delay));
+      }
+      
+      if (!status || (status.confirmationStatus !== 'finalized' && status.confirmationStatus !== 'confirmed')) {
+        // Only do final check if we haven't hit too many consecutive errors
+        if (consecutiveErrors < maxConsecutiveErrors) {
+          try {
+            const finalCheck = await secureRPC.getSignatureStatuses([signature]);
+            const finalStatus = finalCheck && finalCheck.value && finalCheck.value[0];
+            if (finalStatus && (finalStatus.confirmationStatus === 'finalized' || finalStatus.confirmationStatus === 'confirmed') && !finalStatus.err) {
+              console.log('Transaction confirmed on final check');
+              status = finalStatus;
+            } else {
+              throw new Error(`Transaction confirmation timed out after ${confirmationTimeout/1000} seconds. Last error: ${lastError?.message || 'Unknown'}`);
+            }
+          } catch (finalError) {
+            throw new Error(`Transaction confirmation timed out after ${confirmationTimeout/1000} seconds. Last error: ${lastError?.message || 'Unknown'}`);
+          }
         } else {
-          throw new Error(`Transaction failed: ${error.message || "Unknown error"}`);
+          throw new Error(`Transaction confirmation failed due to RPC errors. Last error: ${lastError?.message || 'Unknown'}`);
         }
       }
 
-    } catch (error: any) {
-      notify({ 
-        type: "error", 
-        message: "Token creation failed",
-        description: error.message
+      // Update affiliate earnings if applicable
+      if (affiliateWallet && affiliateAmount > 0) {
+        try {
+          const commissionAmount = affiliateAmount / LAMPORTS_PER_SOL;
+          const earningsResponse = await makeAuthenticatedRequest(`/api/affiliate/${affiliateWallet.toString()}/earnings`, {
+            method: 'POST',
+            body: JSON.stringify({
+              amount: commissionAmount,
+              transactionId: signature,
+              timestamp: new Date().toISOString(),
+              userWallet: publicKey.toString(),
+            }),
+          });
+          
+          if (!earningsResponse.ok) {
+            // Silent failure for affiliate earnings update
+          }
+        } catch (error) {
+          // Don't fail the token creation if affiliate earnings update fails
+        }
+      }
+
+      updateProgress(LoadingStep.COMPLETE);
+      setTokenMintAddress(mintKeypair.publicKey.toString());
+      notify({
+        type: "success",
+        message: "Token created successfully!",
+        txid: signature
       });
-      console.error("Token creation error:", error);
-    } finally {
+
+      } catch (error: any) {
+      
+      // Handle specific error cases
+      if (error.message?.includes("insufficient funds")) {
+        throw new Error("Insufficient SOL balance to complete the transaction");
+      } else if (error.message?.includes("blockhash")) {
+        throw new Error("Transaction expired. Please try again.");
+      } else if (error.message?.includes("too large")) {
+        throw new Error("Transaction too large. Please reduce the number of instructions.");
+      } else if (error.message?.includes("signature")) {
+        throw new Error("Transaction signing failed. Please try again.");
+      } else if (error.message?.includes("already been processed")) {
+        // Check if the transaction was actually successful by looking up the signature
+        try {
+          const statusResp = await secureRPC.getSignatureStatuses([signature]);
+          const status = statusResp && statusResp.value && statusResp.value[0];
+          if (status && status.confirmationStatus === 'finalized' && !status.err) {
+            // Transaction was actually successful, treat as success
+            updateProgress(LoadingStep.COMPLETE);
+            setTokenMintAddress(mintKeypair.publicKey.toString());
+            notify({
+              type: "success",
+              message: "Token created successfully!",
+              txid: signature
+            });
+            return; // Exit early since transaction was successful
+          }
+        } catch (lookupError) {
+          // If we can't verify the status, fall through to the error
+        }
+        throw new Error("Transaction was already processed. Please check your wallet for the new token.");
+      } else if (error.message?.includes("simulation failed")) {
+        throw new Error("Transaction simulation failed. Please try again with a fresh page.");
+      } else {
+        throw new Error(`Transaction failed: ${error.message || "Unknown error"}`);
+      }
+    }
+
+  } catch (error: any) {
+    // Check if this is a timeout error and we haven't exceeded retry limit
+    if (error.message?.includes('confirmation timed out') && retryCount < 2) {
+      console.log(`Transaction timeout, retrying... (attempt ${retryCount + 1}/2)`);
       setIsLoading(false);
       setIsSubmitting(false);
+      transactionLockRef.current = false;
+      
+      // Wait a bit before retrying
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      
+      // Retry the transaction
+      return startTokenCreation(customMintKeypair, retryCount + 1);
     }
-  };
+    
+    notify({ 
+      type: "error", 
+      message: "Token creation failed",
+      description: error.message
+    });
+    console.error("Token creation error:", error);
+  } finally {
+    setIsLoading(false);
+    setIsSubmitting(false);
+    transactionLockRef.current = false;
+  }
+};
 
   return (
     <>

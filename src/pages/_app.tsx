@@ -11,6 +11,7 @@ import { NotificationsProvider } from "../contexts/NotificationsContext";
 import CookieConsentManager from "../components/CookieConsentManager";
 import ConditionalAnalytics from "../components/ConditionalAnalytics";
 import ConditionalGoogleFonts from "../components/ConditionalGoogleFonts";
+import { AffiliateTracker } from "../components/AffiliateTracker";
 
 import "@solana/wallet-adapter-react-ui/styles.css";
 import '../styles/globals.css';
@@ -33,6 +34,7 @@ const App: FC<AppProps> = ({ Component, pageProps }) => {
       <CookieConsentProvider>
         <NotificationsProvider>
           <ContextProvider>
+            <AffiliateTracker />
             <div className="min-h-screen flex flex-col">
               <Notifications />
               <AppBar />
