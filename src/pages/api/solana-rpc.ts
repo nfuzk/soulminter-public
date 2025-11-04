@@ -1,6 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { createRateLimit, rateLimitConfigs } from '../../middleware/rateLimit';
 
+// Cold start tracking
+let isWarmedUp = false;
+let lastRequestTime = 0;
+
 // Solana RPC methods that are allowed
 const ALLOWED_METHODS = [
   'getBalance',
@@ -52,6 +56,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
   try {
     const { method, params = [] } = req.body;
+    
+    // Detect cold start (function hasn't been called in 5 minutes)
+    const isColdStart = !isWarmedUp || (Date.now() - lastRequestTime > 300000);
+    if (isColdStart) {
+      console.log('Cold start detected, using extended timeouts');
+      isWarmedUp = true;
+    }
+    lastRequestTime = Date.now();
 
     // Validate method is allowed
     if (!method || !ALLOWED_METHODS.includes(method)) {
@@ -81,8 +93,13 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
      }
 
     // Forward the RPC request to Solana with timeout
+    // Use longer timeout for cold starts and sendTransaction
+    const isSendTransaction = method === 'sendTransaction';
+    const baseTimeout = isSendTransaction ? 60000 : 45000; // 60s for sendTransaction, 45s for others
+    const timeout = isColdStart ? baseTimeout * 1.5 : baseTimeout; // 90s/67.5s for cold starts
+    
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
     
     const response = await fetch(rpcUrl, {
       method: 'POST',

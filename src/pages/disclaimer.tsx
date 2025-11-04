@@ -15,7 +15,7 @@ const Disclaimer: NextPage = () => {
         <meta name="keywords" content="SoulMinter disclaimer, legal disclaimer, crypto disclaimer, token creator disclaimer, Solana disclaimer, blockchain disclaimer, risk warning" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="index, follow" />
-        <meta name="language" content="English" />
+        <meta name="language" content="en" />
         <meta name="author" content="SoulMinter" />
         <meta name="revisit-after" content="30 days" />
         <meta name="theme-color" content="#000000" />

@@ -718,21 +718,28 @@ export const CreateToken: FC = () => {
       const sendTransactionPromise = sendWithFallback(secureRPC, rawTx);
       
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Transaction send timeout')), 60000); // 60 second timeout for mainnet
+        setTimeout(() => reject(new Error('Transaction send timeout')), 90000); // 90 second timeout for cold starts
       });
       
       signature = await Promise.race([sendTransactionPromise, timeoutPromise]);
 
       // Wait for confirmation using getSignatureStatuses loop with improved logic
-      const confirmationTimeout = 120000; // 2 minutes for mainnet
+      const confirmationTimeout = 180000; // 3 minutes for mainnet (extended for cold starts)
       const startTime = Date.now();
       let status = null;
       let lastError = null;
       let consecutiveErrors = 0;
-      const maxConsecutiveErrors = 5; // Stop after 5 consecutive errors
+      const maxConsecutiveErrors = 3; // Stop after 3 consecutive errors (reduced to fail faster)
+      const maxStatusChecks = 60; // Maximum 60 status checks to prevent infinite loops
+      let statusCheckCount = 0;
       
-      while (Date.now() - startTime < confirmationTimeout && consecutiveErrors < maxConsecutiveErrors) {
+      while (
+        Date.now() - startTime < confirmationTimeout && 
+        consecutiveErrors < maxConsecutiveErrors &&
+        statusCheckCount < maxStatusChecks // Prevent infinite loops
+      ) {
         try {
+          statusCheckCount++;
           const statusResp = await secureRPC.getSignatureStatuses([signature]);
           status = statusResp && statusResp.value && statusResp.value[0];
           consecutiveErrors = 0; // Reset error counter on successful request
@@ -744,6 +751,12 @@ export const CreateToken: FC = () => {
             // Accept both 'finalized' and 'confirmed' for better reliability
             if (status.confirmationStatus === 'finalized' || status.confirmationStatus === 'confirmed') {
               break;
+            }
+            
+            // If transaction is still null after many checks, it may have expired
+            if (status.confirmationStatus === null && statusCheckCount > 20) {
+              console.warn('Transaction appears to have expired or failed');
+              throw new Error('Transaction expired - please try again');
             }
           }
         } catch (e) {
@@ -758,11 +771,14 @@ export const CreateToken: FC = () => {
           }
         }
         
-        // Progressive backoff: start with 2s, increase to 5s
-        const elapsed = Date.now() - startTime;
-        const delay = elapsed < 30000 ? 2000 : 5000;
-        await new Promise(res => setTimeout(res, delay));
+        // Progressive backoff with jitter to prevent thundering herd
+        const baseDelay = Math.min(2000 + (statusCheckCount * 300), 8000); // Increase delay over time, max 8s
+        const jitter = Math.random() * 1000; // Add random jitter
+        await new Promise(res => setTimeout(res, baseDelay + jitter));
       }
+      
+      // Log final status for debugging
+      console.log(`Confirmation loop ended. Status checks: ${statusCheckCount}/${maxStatusChecks}, Consecutive errors: ${consecutiveErrors}/${maxConsecutiveErrors}`);
       
       if (!status || (status.confirmationStatus !== 'finalized' && status.confirmationStatus !== 'confirmed')) {
         // Only do final check if we haven't hit too many consecutive errors
@@ -787,7 +803,7 @@ export const CreateToken: FC = () => {
       // Update affiliate earnings if applicable
       if (affiliateWallet && affiliateAmount > 0) {
         try {
-          const commissionAmount = affiliateAmount / LAMPORTS_PER_SOL;
+          const commissionAmount = Math.round((affiliateAmount / LAMPORTS_PER_SOL) * 100) / 100;
           const earningsResponse = await makeAuthenticatedRequest(`/api/affiliate/${affiliateWallet.toString()}/earnings`, {
             method: 'POST',
             body: JSON.stringify({

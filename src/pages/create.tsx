@@ -16,7 +16,7 @@ const Create: NextPage = (props) => {
         <meta name="keywords" content="Solana token creator, SPL token, create Solana token, no-code token creation, crypto token maker, SoulMinter, Solana token launch, token generator, blockchain token, DeFi token, custom token, token minting" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="index, follow" />
-        <meta name="language" content="English" />
+        <meta name="language" content="en" />
         <meta name="author" content="SoulMinter" />
         <meta name="revisit-after" content="7 days" />
         <meta name="theme-color" content="#000000" />

@@ -14,12 +14,25 @@ export const AppBar: FC = () => {
   const { showSettings } = useCookieConsent();
   const [mounted, setMounted] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isBlogSubdomain, setIsBlogSubdomain] = useState(false);
   const { connection } = useConnection();
   const { disconnect, connected, wallet } = useWallet();
 
   useEffect(() => {
     setMounted(true);
+    // Check if we're on the blog subdomain
+    if (typeof window !== 'undefined') {
+      setIsBlogSubdomain(window.location.hostname === 'blog.soulminter.io' || window.location.hostname === 'www.blog.soulminter.io');
+    }
   }, []);
+
+  // Helper function to get the correct URL - redirect to main site if on blog subdomain
+  const getMainSiteUrl = (path: string = '') => {
+    if (isBlogSubdomain) {
+      return `https://soulminter.io${path}`;
+    }
+    return path;
+  };
 
   if (!mounted) {
     return null;
@@ -28,21 +41,24 @@ export const AppBar: FC = () => {
   return (
     <div className="navbar bg-[#0F1624] text-white shadow-lg">
       <div className="flex-1">
-        <Link href="/" className="btn btn-ghost normal-case flex items-center">
+        <Link href={getMainSiteUrl('/')} className="btn btn-ghost normal-case flex items-center">
           <Image src="https://pink-abstract-gayal-682.mypinata.cloud/ipfs/bafybeieue5otjvplqi2exrkdaxwdmjwsa2c7obiheim4wilcj6tleq63n4" alt="SoulMinter Logo" width={35} height={35} style={{ marginRight: '0.5rem', borderRadius: '0.3rem' }} />
           <span className={styles.title} style={{fontSize: '1.5rem', marginBottom: 0, fontWeight: 700}}>SoulMinter</span>
         </Link>
       </div>
       {/* Desktop Nav */}
       <div className="flex-none gap-2 hidden md:flex items-center">
-        <Link href="/" className="btn btn-ghost">
+        <Link href={getMainSiteUrl('/')} className="btn btn-ghost">
           Home
         </Link>
-        <Link href="/create" className="btn btn-ghost">
+        <Link href={getMainSiteUrl('/create')} className="btn btn-ghost">
           Create Token
         </Link>
-        <Link href="/affiliate" className="btn btn-ghost">
+        <Link href={getMainSiteUrl('/affiliate')} className="btn btn-ghost">
           Affiliate
+        </Link>
+        <Link href="https://blog.soulminter.io" className="btn btn-ghost">
+          Blog
         </Link>
         <WalletMultiButton />
         <div className="dropdown dropdown-end">
@@ -85,14 +101,17 @@ export const AppBar: FC = () => {
         </button>
         {menuOpen && (
           <div className="absolute top-16 right-2 z-50 bg-[#0F1624] rounded-lg shadow-lg w-48 flex flex-col p-2">
-            <Link href="/" className="btn btn-ghost w-full mb-1" onClick={() => setMenuOpen(false)}>
+            <Link href={getMainSiteUrl('/')} className="btn btn-ghost w-full mb-1" onClick={() => setMenuOpen(false)}>
               Home
             </Link>
-            <Link href="/create" className="btn btn-ghost w-full mb-1" onClick={() => setMenuOpen(false)}>
+            <Link href={getMainSiteUrl('/create')} className="btn btn-ghost w-full mb-1" onClick={() => setMenuOpen(false)}>
               Create Token
             </Link>
-            <Link href="/affiliate" className="btn btn-ghost w-full mb-1" onClick={() => setMenuOpen(false)}>
+            <Link href={getMainSiteUrl('/affiliate')} className="btn btn-ghost w-full mb-1" onClick={() => setMenuOpen(false)}>
               Affiliate
+            </Link>
+            <Link href="https://blog.soulminter.io" className="btn btn-ghost w-full mb-1" onClick={() => setMenuOpen(false)}>
+              Blog
             </Link>
             <div className="mb-1">
               <WalletMultiButton />

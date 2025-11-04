@@ -3,8 +3,8 @@ import Head from "next/head";
 import { HomeView } from "../views";
 
 const siteUrl = "https://soulminter.io";
-const siteTitle = "SoulMinter – Create Solana Tokens Instantly | No-Code Token Creator";
-const siteDescription = "Create Solana tokens instantly with SoulMinter. No coding required. Launch your SPL token in minutes with our secure, fast, and user-friendly platform. Join our affiliate program to earn SOL.";
+const siteTitle = "SoulMinter – Create Solana Tokens | No-Code Token Creator";
+const siteDescription = "Create Solana tokens instantly with SoulMinter. No coding required. Launch your SPL token in minutes with our secure platform.";
 const siteImage = "https://pink-abstract-gayal-682.mypinata.cloud/ipfs/bafybeieue5otjvplqi2exrkdaxwdmjwsa2c7obiheim4wilcj6tleq63n4";
 
 const Home: NextPage = (props) => {
@@ -16,7 +16,7 @@ const Home: NextPage = (props) => {
         <meta name="keywords" content="Solana token creator, SPL token, create Solana token, no-code token creation, crypto token maker, SoulMinter, Solana token launch, token generator, affiliate program, earn SOL" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="index, follow" />
-        <meta name="language" content="English" />
+        <meta name="language" content="en" />
         <meta name="author" content="SoulMinter" />
         <meta name="revisit-after" content="7 days" />
         {/* Open Graph / Facebook */}

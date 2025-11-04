@@ -2,7 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import { createRateLimit, rateLimitConfigs } from '../../middleware/rateLimit';
 import formidable from 'formidable';
 import fs from 'fs';
-import { uploadFile, getFileUrl } from '../../lib/ardrive';
+import { uploadFileWithFallback } from '../../lib/uploadService';
 
 // Security configuration
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -104,7 +104,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
       const fileBuffer = fs.readFileSync(file.filepath);
       
-      const transactionId = await uploadFile(fileBuffer, file.originalFilename!, file.mimetype);
+      const result = await uploadFileWithFallback(fileBuffer, file.originalFilename!, file.mimetype);
 
       // Clean up temporary file after successful upload
       try {
@@ -115,8 +115,8 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
       return res.status(200).json({
         success: true,
-        ipfsHash: transactionId,
-        ipfsUrl: getFileUrl(transactionId)
+        ipfsHash: result.hash,
+        ipfsUrl: result.url
       });
     } else {
       return res.status(400).json({ error: 'File is required' });

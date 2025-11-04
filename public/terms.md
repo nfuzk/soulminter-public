@@ -1,6 +1,6 @@
 # SoulMinter Terms of Service
 
-**Last Updated: September 15, 2025**
+**Last Updated: October 20, 2025**
 
 ## 1. Introduction and Acceptance of Terms
 
@@ -12,21 +12,29 @@ Welcome to SoulMinter.io (the "Platform"), a web-based service that facilitates 
 
 SoulMinter provides a non-custodial, technical tool that enables users to interact with the Solana blockchain to create custom SPL (Solana Program Library) tokens. Our service is limited to providing the software interface and infrastructure to facilitate on-chain token creation based on parameters you provide. We do not:
 
-*   **Provide Financial, Investment, or Legal Advice:** SoulMinter is not a financial institution, investment advisor, broker, or legal counsel. Any information provided on the Platform, including descriptions of token functionalities or general market information, is for informational purposes only and does not constitute financial, investment, legal, or tax advice. You are solely responsible for conducting your own due diligence and consulting with qualified professionals before making any decisions related to crypto-assets or using our services.
-*   **Operate as a Crypto-Asset Exchange or Trading Platform:** SoulMinter does not facilitate the exchange of crypto-assets for fiat currency or other crypto-assets, nor does it operate a secondary market for trading tokens created on our Platform. We do not provide order matching, price discovery, or any other services typically associated with crypto-asset exchanges.
-*   **Act as a Custodian of Crypto-Assets:** SoulMinter does not take custody of your private keys, wallet, or any crypto-assets, including the tokens you create using our Platform. You retain full and exclusive control over your wallet and all associated assets at all times. We do not have access to your funds or the ability to transfer them.
-*   **Guarantee Token Value or Performance:** We do not make any representations or warranties regarding the future value, liquidity, or performance of any tokens created using our Platform. The value of crypto-assets is highly volatile and can result in significant losses.
-*   **Endorse or Validate User-Created Tokens:** The creation of a token on our Platform does not imply any endorsement, validation, or approval by SoulMinter of the token, its underlying project, or its compliance with any laws or regulations. You are solely responsible for the tokens you create and any activities associated with them.
+- **Provide Financial, Investment, or Legal Advice:** SoulMinter is not a financial institution, investment advisor, broker, or legal counsel. Any information provided on the Platform, including descriptions of token functionalities or general market information, is for informational purposes only and does not constitute financial, investment, legal, or tax advice. You are solely responsible for conducting your own due diligence and consulting with qualified professionals before making any decisions related to crypto-assets or using our services.
+
+- **Operate as a Crypto-Asset Exchange or Trading Platform:** SoulMinter does not facilitate the exchange of crypto-assets for fiat currency or other crypto-assets, nor does it operate a secondary market for trading tokens created on our Platform. We do not provide order matching, price discovery, or any other services typically associated with crypto-asset exchanges.
+
+- **Act as a Custodian of Crypto-Assets:** SoulMinter does not take custody of your private keys, wallet, or any crypto-assets, including the tokens you create using our Platform. You retain full and exclusive control over your wallet and all associated assets at all times. We do not have access to your funds or the ability to transfer them.
+
+- **Guarantee Token Value or Performance:** We do not make any representations or warranties regarding the future value, liquidity, or performance of any tokens created using our Platform. The value of crypto-assets is highly volatile and can result in significant losses.
+
+- **Endorse or Validate User-Created Tokens:** The creation of a token on our Platform does not imply any endorsement, validation, or approval by SoulMinter of the token, its underlying project, or its compliance with any laws or regulations. You are solely responsible for the tokens you create and any activities associated with them.
 
 ## 3. User Eligibility and Representations
 
 By using the Platform, you represent and warrant that:
 
-*   You are at least 18 years of age and have the legal capacity to enter into these Terms.
-*   You are not located in, or a citizen or resident of, any jurisdiction where the use of our services is prohibited by law or where SoulMinter is prohibited from offering its services.
-*   You will comply with all applicable laws, regulations, and governmental policies in your jurisdiction regarding the use of crypto-assets and our services, including but not limited to anti-money laundering (AML), counter-terrorism financing (CTF), securities laws, and consumer protection laws.
-*   You will use the Platform only for lawful purposes and in accordance with these Terms.
-*   All information you provide to us is true, accurate, complete, and current.
+- You are at least 18 years of age and have the legal capacity to enter into these Terms.
+
+- You are not located in, or a citizen or resident of, any jurisdiction where the use of our services is prohibited by law or where SoulMinter is prohibited from offering its services.
+
+- You will comply with all applicable laws, regulations, and governmental policies in your jurisdiction regarding the use of crypto-assets and our services, including but not limited to anti-money laundering (AML), counter-terrorism financing (CTF), securities laws, and consumer protection laws.
+
+- You will use the Platform only for lawful purposes and in accordance with these Terms.
+
+- All information you provide to us is true, accurate, complete, and current.
 
 ## 4. User Responsibilities and Prohibited Conduct
 
@@ -34,26 +42,39 @@ By using the Platform, you represent and warrant that:
 
 As a User of SoulMinter, you are solely responsible for:
 
-*   **Wallet Security:** Maintaining the security and confidentiality of your Solana-compatible wallet, including your private keys and seed phrases. SoulMinter is not responsible for any loss or theft of your crypto-assets resulting from your failure to secure your wallet.
-*   **Accuracy of Information:** Ensuring the accuracy and completeness of all information you provide for token creation, including token name, symbol, decimals, supply, and metadata. You bear all risks associated with inaccurate or misleading information.
-*   **Compliance of Created Tokens:** Ensuring that any tokens you create using the Platform, and any subsequent activities related to those tokens (e.g., public offerings, sales, distribution, marketing), comply with all applicable laws and regulations in all relevant jurisdictions. This includes, but is not limited to, securities laws, consumer protection laws, and crypto-asset regulations. **SoulMinter expressly disclaims any responsibility for the legal or regulatory compliance of tokens created by users on the Platform. You acknowledge and agree that SoulMinter has no obligation to monitor or verify the legality or compliance of any tokens created by you.**
-*   **Tax Obligations:** Determining and paying any taxes applicable to your activities on the Platform, including token creation fees, affiliate commissions, and any gains derived from crypto-assets.
-*   **Due Diligence:** Conducting your own independent research and due diligence on the legal, regulatory, financial, and technical aspects of crypto-assets and the Solana blockchain before using our services.
+- **Wallet Security:** Maintaining the security and confidentiality of your Solana-compatible wallet, including your private keys and seed phrases. SoulMinter is not responsible for any loss or theft of your crypto-assets resulting from your failure to secure your wallet.
+
+- **Accuracy of Information:** Ensuring the accuracy and completeness of all information you provide for token creation, including token name, symbol, decimals, supply, and metadata. You bear all risks associated with inaccurate or misleading information.
+
+- **Compliance of Created Tokens:** Ensuring that any tokens you create using the Platform, and any subsequent activities related to those tokens (e.g., public offerings, sales, distribution, marketing), comply with all applicable laws and regulations in all relevant jurisdictions. This includes, but is not limited to, securities laws, consumer protection laws, and crypto-asset regulations. **SoulMinter expressly disclaims any responsibility for the legal or regulatory compliance of tokens created by users on the Platform. You acknowledge and agree that SoulMinter has no obligation to monitor or verify the legality or compliance of any tokens created by you.**
+
+- **Tax Obligations:** Determining and paying any taxes applicable to your activities on the Platform, including token creation fees, affiliate commissions, and any gains derived from crypto-assets.
+
+- **Due Diligence:** Conducting your own independent research and due diligence on the legal, regulatory, financial, and technical aspects of crypto-assets and the Solana blockchain before using our services.
 
 ### 4.2. Prohibited Conduct
 
 You agree not to engage in, or attempt to engage in, any of the following prohibited activities:
 
-*   **Illegal Activities:** Using the Platform for any illegal purpose, including but not limited to money laundering, terrorist financing, fraud, market manipulation, or any activity that violates applicable laws or regulations.
-*   **Harmful Content:** Creating tokens or metadata that are unlawful, defamatory, obscene, pornographic, indecent, abusive, harassing, violent, hateful, inflammatory, or otherwise objectionable.
-*   **Intellectual Property Infringement:** Creating tokens or metadata that infringe upon the intellectual property rights of others, including copyrights, trademarks, or patents.
-*   **Misleading or Deceptive Practices:** Creating tokens with misleading names, symbols, or descriptions, or engaging in any deceptive practices intended to defraud or mislead other users or the public.
-*   **System Abuse:** Interfering with or disrupting the integrity or performance of the Platform or its underlying infrastructure, including introducing viruses, worms, or other malicious code.
-*   **Unauthorized Access:** Attempting to gain unauthorized access to any part of the Platform, other users' accounts, or the Solana blockchain.
-*   **Circumvention of Controls:** Attempting to circumvent any security or access control measures implemented by SoulMinter.
-*   **Commercial Use without Authorization:** Using the Platform for any commercial purpose not expressly permitted by these Terms.
-*   **Resale of Services:** Reselling or sublicensing any part of the Platform's services without our prior written consent.
-*   **Data Scraping:** Using any automated system or software to extract data from the Platform for commercial purposes without our express written consent.
+- **Illegal Activities:** Using the Platform for any illegal purpose, including but not limited to money laundering, terrorist financing, fraud, market manipulation, or any activity that violates applicable laws or regulations.
+
+- **Harmful Content:** Creating tokens or metadata that are unlawful, defamatory, obscene, pornographic, indecent, abusive, harassing, violent, hateful, inflammatory, or otherwise objectionable.
+
+- **Intellectual Property Infringement:** Creating tokens or metadata that infringe upon the intellectual property rights of others, including copyrights, trademarks, or patents.
+
+- **Misleading or Deceptive Practices:** Creating tokens with misleading names, symbols, or descriptions, or engaging in any deceptive practices intended to defraud or mislead other users or the public.
+
+- **System Abuse:** Interfering with or disrupting the integrity or performance of the Platform or its underlying infrastructure, including introducing viruses, worms, or other malicious code.
+
+- **Unauthorized Access:** Attempting to gain unauthorized access to any part of the Platform, other users' accounts, or the Solana blockchain.
+
+- **Circumvention of Controls:** Attempting to circumvent any security or access control measures implemented by SoulMinter.
+
+- **Commercial Use without Authorization:** Using the Platform for any commercial purpose not expressly permitted by these Terms.
+
+- **Resale of Services:** Reselling or sublicensing any part of the Platform's services without our prior written consent.
+
+- **Data Scraping:** Using any automated system or software to extract data from the Platform for commercial purposes without our express written consent.
 
 **SoulMinter reserves the right, but is not obligated, to monitor user activity and content on the Platform. However, given the technical and non-custodial nature of our service and our minimal data collection, we cannot actively prevent or be held liable for all instances of prohibited conduct or malicious use by users. You acknowledge that you use the Platform at your own risk and are solely responsible for your actions and the compliance of your created tokens. SoulMinter shall not be liable for any damages or losses arising from your engagement in prohibited conduct or malicious use of the Platform.** If we determine, in our sole discretion, that you have engaged in any prohibited conduct, we may, without notice, suspend or terminate your access to the Platform and take any other action deemed appropriate, including reporting to relevant authorities.
 
@@ -61,10 +82,13 @@ You agree not to engage in, or attempt to engage in, any of the following prohib
 
 SoulMinter charges a fee for the token creation service, which is clearly displayed on the Platform at the time of creation. By proceeding with token creation, you agree to pay the specified fee. Please note:
 
-*   **Non-Refundable:** All fees paid for token creation are non-refundable once the transaction is successfully processed on the Solana blockchain.
-*   **Fee Changes:** We reserve the right to change our fees at any time. Any changes will be effective immediately upon posting on the Platform. It is your responsibility to review the current fees before initiating a token creation.
-*   **Network Costs:** The fee covers our service costs and network transaction fees (gas fees) associated with the Solana blockchain. You acknowledge that blockchain transaction fees are dynamic and outside of our control.
-*   **Affiliate Commission:** A portion of the token creation fee may be allocated as an affiliate commission to a referring user, as detailed in our Affiliate Program terms. This is a marketing incentive and not a financial service provided by SoulMinter.
+- **Non-Refundable:** All fees paid for token creation are non-refundable once the transaction is successfully processed on the Solana blockchain.
+
+- **Fee Changes:** We reserve the right to change our fees at any time. Any changes will be effective immediately upon posting on the Platform. It is your responsibility to review the current fees before initiating a token creation.
+
+- **Network Costs:** The fee covers our service costs and network transaction fees (gas fees) associated with the Solana blockchain. You acknowledge that blockchain transaction fees are dynamic and outside of our control.
+
+- **Affiliate Commission:** A portion of the token creation fee may be allocated as an affiliate commission to a referring user, as detailed in our Affiliate Program terms. This is a marketing incentive and not a financial service provided by SoulMinter.
 
 ## 6. Intellectual Property
 
@@ -80,11 +104,15 @@ THE PLATFORM AND ITS SERVICES ARE PROVIDED ON AN "AS IS" AND "AS AVAILABLE" BASI
 
 YOU ACKNOWLEDGE AND AGREE THAT THE USE OF CRYPTO-ASSETS AND THE SOLANA BLOCKCHAIN INVOLVES SIGNIFICANT RISKS, INCLUDING BUT NOT LIMITED TO:
 
-*   **Volatility:** The value of crypto-assets can be extremely volatile and may result in substantial losses.
-*   **Regulatory Risk:** The regulatory landscape for crypto-assets is uncertain and subject to rapid change, which may impact the legality or viability of certain crypto-assets or services.
-*   **Technological Risk:** Risks associated with the Solana blockchain, smart contracts, and other underlying technologies, including bugs, exploits, or network congestion.
-*   **Security Risk:** Risks of cyberattacks, hacking, or other security breaches that may result in the loss of your crypto-assets.
-*   **Liquidity Risk:** The market for certain crypto-assets may be illiquid, making it difficult to sell them at a desired price.
+- **Volatility:** The value of crypto-assets can be extremely volatile and may result in substantial losses.
+
+- **Regulatory Risk:** The regulatory landscape for crypto-assets is uncertain and subject to rapid change, which may impact the legality or viability of certain crypto-assets or services.
+
+- **Technological Risk:** Risks associated with the Solana blockchain, smart contracts, and other underlying technologies, including bugs, exploits, or network congestion.
+
+- **Security Risk:** Risks of cyberattacks, hacking, or other security breaches that may result in the loss of your crypto-assets.
+
+- **Liquidity Risk:** The market for certain crypto-assets may be illiquid, making it difficult to sell them at a desired price.
 
 YOU ARE SOLELY RESPONSIBLE FOR ASSESSING AND BEARING THE RISKS ASSOCIATED WITH THE USE OF THE PLATFORM AND THE CREATION OF CRYPTO-ASSETS.
 
@@ -100,66 +128,48 @@ SOME JURISDICTIONS DO NOT ALLOW THE EXCLUSION OF CERTAIN WARRANTIES OR THE LIMIT
 
 You agree to indemnify, defend, and hold harmless SoulMinter, its affiliates, directors, employees, agents, suppliers, and licensors from and against any and all claims, liabilities, damages, losses, costs, expenses, or fees (including reasonable attorneys' fees) arising out of or relating to:
 
-*   Your access to or use of the Platform;
-*   Your User Content, including any claims that your User Content infringes or violates the intellectual property rights or other rights of any third party;
-*   Any tokens you create using the Platform, including any claims related to their legality, functionality, or any losses incurred by third parties due to your tokens;
-*   Your violation of these Terms or any applicable laws or regulations;
-*   Your negligence or willful misconduct.
+- Your access to or use of the Platform;
+
+- Your User Content, including any claims that your User Content infringes or violates the intellectual property rights or other rights of any third party;
+
+- Any tokens you create using the Platform, including any claims related to their legality, functionality, or any losses incurred by third parties due to your tokens;
+
+- Your violation of these Terms or any applicable laws or regulations;
+
+- Your negligence or willful misconduct.
 
 ## 9. Governing Law and Dispute Resolution
 
 ### 9.1. Governing Law
 
-These Terms shall be governed by and construed in accordance with the laws of a jurisdiction to be determined by SoulMinter, without regard to its conflict of law principles. This choice of law does not limit any consumer protection rights that you may be entitled to in your country of residence under the laws of that country.
+These Terms and any dispute or claim arising out of or in connection with them or their subject matter or formation (including non-contractual disputes or claims) shall be governed by and construed in accordance with the laws of the State of Wyoming, without giving effect to any choice or conflict of law provision or rule.
 
-### 9.2. Arbitration Agreement
+### 9.2. Mandatory Arbitration
 
-Any dispute, controversy, or claim arising out of or relating to these Terms or the breach, termination, or validity thereof, shall be finally settled by arbitration in accordance with the rules of a recognized international arbitration institution (e.g., the International Chamber of Commerce (ICC) or the London Court of International Arbitration (LCIA)). The arbitration shall be conducted in a major international city, and the language of the arbitration shall be English. The number of arbitrators shall be one. The award rendered by the arbitrator shall be final and binding upon the parties and may be entered in any court having jurisdiction thereof.
+Any dispute, claim, or controversy arising out of or relating to these Terms or the breach, termination, enforcement, interpretation, or validity thereof, including the determination of the scope or applicability of this agreement to arbitrate, shall be determined by arbitration in Cheyenne, Wyoming before one arbitrator. The arbitration shall be administered by JAMS pursuant to its Comprehensive Arbitration Rules and Procedures. Judgment on the Award may be entered in any court having jurisdiction. This clause shall not preclude parties from seeking provisional remedies in aid of arbitration from a court of appropriate jurisdiction.
 
-### 9.3. Class Action Waiver
+### 9.3. Waiver of Class Action Rights
 
-YOU AGREE THAT YOU MAY BRING CLAIMS AGAINST SOULMINTER ONLY IN YOUR INDIVIDUAL CAPACITY AND NOT AS A PLAINTIFF OR CLASS MEMBER IN ANY PURPORTED CLASS OR REPRESENTATIVE PROCEEDING. Unless both you and SoulMinter agree otherwise, the arbitrator may not consolidate more than one person's claims, and may not otherwise preside over any form of a representative or class proceeding.
+YOU AND SOULMINTER AGREE THAT EACH MAY BRING CLAIMS AGAINST THE OTHER ONLY IN YOUR OR ITS INDIVIDUAL CAPACITY, AND NOT AS A PLAINTIFF OR CLASS MEMBER IN ANY PURPORTED CLASS OR REPRESENTATIVE PROCEEDING. Further, unless both you and SoulMinter agree otherwise, the arbitrator may not consolidate more than one person's claims, and may not otherwise preside over any form of a representative or class proceeding.
 
-## 10. Termination
+## 10. Blog
 
-We may terminate or suspend your access to the Platform immediately, without prior notice or liability, for any reason whatsoever, including without limitation if you breach these Terms. Upon termination, your right to use the Platform will immediately cease. All provisions of these Terms which by their nature should survive termination shall survive termination, including, without limitation, ownership provisions, warranty disclaimers, indemnity, and limitations of liability.
+### 10.1. Nature of Blog Content
 
-## 11. Changes to Terms
+The SoulMinter blog (blog.soulminter.io) provides informational articles, updates, and educational content related to the Solana blockchain, token creation, and the broader crypto ecosystem. All content published on the blog is for general informational purposes only and does not constitute financial, investment, legal, or tax advice. SoulMinter does not endorse any specific projects, tokens, or investment strategies discussed on the blog. You should conduct your own research and consult with qualified professionals before making any decisions based on blog content.
 
-We reserve the right, at our sole discretion, to modify or replace these Terms at any time. If a revision is material, we will provide at least 30 days' notice prior to any new terms taking effect. What constitutes a material change will be determined at our sole discretion. By continuing to access or use our Platform after those revisions become effective, you agree to be bound by the revised terms. If you do not agree to the new terms, you must stop using the Platform.
+### 10.2. Intellectual Property of Blog Content
 
-## 12. Miscellaneous
+All content published on the SoulMinter blog, including articles, images, graphics, and other materials, is the property of SoulMinter or its content providers and is protected by copyright and other intellectual property laws. You may not reproduce, distribute, modify, create derivative works of, publicly display, publicly perform, republish, download, store, or transmit any of the material on our blog, except as generally permitted by standard web browsing functionality.
 
-### 12.1. Entire Agreement
+## 11. Links to Third-Party Websites
 
-These Terms, together with our Privacy Policy and Disclaimer, constitute the entire agreement between you and SoulMinter regarding your use of the Platform and supersede all prior and contemporaneous understandings, agreements, representations, and warranties, both written and oral, regarding the Platform.
+The Platform and blog may contain links to third-party websites or services that are not owned or controlled by SoulMinter. SoulMinter has no control over, and assumes no responsibility for, the content, privacy policies, or practices of any third-party websites or services. We do not warrant the offerings of any of these entities/individuals or their websites. You acknowledge and agree that SoulMinter shall not be responsible or liable, directly or indirectly, for any damage or loss caused or alleged to be caused by or in connection with the use of or reliance on any such content, goods, or services available on or through any such third-party websites or services. We strongly advise you to read the terms and conditions and privacy policies of any third-party websites or services that you visit.
 
-### 12.2. Severability
+## 12. Updates to Terms
 
-If any provision of these Terms is held to be invalid or unenforceable by a court, the remaining provisions of these Terms will remain in effect. The invalid or unenforceable provision will be replaced by a valid and enforceable provision that most closely matches the intent of the original provision.
+We reserve the right, at our sole discretion, to modify or replace these Terms at any time. If a revision is material, we will provide at least 30 days' notice prior to any new terms taking effect. What constitutes a material change will be determined at our sole discretion. By continuing to access or use our Platform after any revisions become effective, you agree to be bound by the revised terms. If you do not agree to the new terms, you are no longer authorized to use the Platform.
 
-### 12.3. Assignment
+## 13. Contact Us
 
-You may not assign or transfer these Terms, by operation of law or otherwise, without our prior written consent. Any attempt by you to assign or transfer these Terms, without such consent, will be null and void. We may freely assign or transfer these Terms without restriction.
-
-### 12.4. Waiver
-
-Our failure to enforce any right or provision of these Terms will not be considered a waiver of those rights. The exercise by either party of any of its remedies under these Terms will be without prejudice to its other remedies under these Terms or otherwise.
-
-### 12.5. Force Majeure
-
-SoulMinter shall not be liable for any delay or failure to perform resulting from causes outside its reasonable control, including, without limitation, acts of God, wars, terrorism, riots, embargoes, acts of civil or military authorities, fires, floods, accidents, strikes, or shortages of transportation facilities, fuel, energy, labor, or materials.
-
-## 13. Contact Information
-
-For any questions about these Terms, please contact us at:
-
-Email: main@soulminter.io
-
-**SoulMinter**
-
-**online-only**
-
-**soulminter.io**
-
----
+If you have any questions about these Terms, please contact us at [main@soulminter.io](mailto:main@soulminter.io).

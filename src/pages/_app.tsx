@@ -11,6 +11,7 @@ import { NotificationsProvider } from "../contexts/NotificationsContext";
 import CookieConsentManager from "../components/CookieConsentManager";
 import ConditionalAnalytics from "../components/ConditionalAnalytics";
 import ConditionalGoogleFonts from "../components/ConditionalGoogleFonts";
+import GoogleAnalytics from "../components/GoogleAnalytics";
 import { AffiliateTracker } from "../components/AffiliateTracker";
 
 import "@solana/wallet-adapter-react-ui/styles.css";
@@ -20,12 +21,12 @@ const App: FC<AppProps> = ({ Component, pageProps }) => {
   return (
     <>
       <Head>
-        <title>SoulMinter – Create Solana Tokens Instantly | No-Code Token Creator</title>
-        <meta name="description" content="Create Solana tokens instantly with SoulMinter. No coding required. Launch your SPL token in minutes with our secure, fast, and user-friendly platform. Join our affiliate program to earn SOL." />
-        <meta name="keywords" content="Solana token creator, SPL token, create Solana token, no-code token creation, crypto token maker, SoulMinter, Solana token launch, token generator, affiliate program, earn SOL" />
+        {/* Default meta; individual pages set specific titles & descriptions */}
+        <meta name="description" content="SoulMinter – Create Solana tokens instantly with our no-code platform." />
+        <meta name="keywords" content="Solana token creator, SPL token, token creation, SoulMinter" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="index, follow" />
-        <meta name="language" content="English" />
+        <meta name="language" content="en" />
         <meta name="author" content="SoulMinter" />
         <meta name="revisit-after" content="7 days" />
         <meta name="theme-color" content="#000000" />
@@ -47,6 +48,7 @@ const App: FC<AppProps> = ({ Component, pageProps }) => {
               <CookieConsentManager />
             </div>
             <ConditionalAnalytics />
+            <GoogleAnalytics />
             <ConditionalGoogleFonts />
           </ContextProvider>
         </NotificationsProvider>

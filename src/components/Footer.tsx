@@ -1,4 +1,4 @@
-import { FC } from 'react';
+import { FC, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useConnection } from '@solana/wallet-adapter-react';
 import { useCookieConsent } from '../contexts/CookieConsentContext';
@@ -9,24 +9,40 @@ const Footer: FC = () => {
   const network = getSolanaNetwork();
   const networkName = network === 'devnet' ? 'Solana Devnet' : network === 'testnet' ? 'Solana Testnet' : 'Solana Mainnet';
   const { showSettings } = useCookieConsent();
+  const [isBlogSubdomain, setIsBlogSubdomain] = useState(false);
+
+  useEffect(() => {
+    // Check if we're on the blog subdomain
+    if (typeof window !== 'undefined') {
+      setIsBlogSubdomain(window.location.hostname === 'blog.soulminter.io' || window.location.hostname === 'www.blog.soulminter.io');
+    }
+  }, []);
+
+  // Helper function to get the correct URL - redirect to main site if on blog subdomain
+  const getMainSiteUrl = (path: string = '') => {
+    if (isBlogSubdomain) {
+      return `https://soulminter.io${path}`;
+    }
+    return path;
+  };
 
   return (
     <footer className={styles.footer}>
       <div className={styles.container}>
         <div className={styles.links}>
-          <Link href="/tos" className={styles.link}>
+          <Link href={getMainSiteUrl('/tos')} className={styles.link}>
             Terms of Service
           </Link>
           <span className={styles.separator}>•</span>
-          <a href="/privacy" className={styles.link} target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+          <a href={getMainSiteUrl('/privacy')} className={styles.link} target="_blank" rel="noopener noreferrer">Privacy Policy</a>
           <span className={styles.separator}>|</span>
-          <a href="/disclaimer" className={styles.link} target="_blank" rel="noopener noreferrer">Disclaimer</a>
+          <a href={getMainSiteUrl('/disclaimer')} className={styles.link} target="_blank" rel="noopener noreferrer">Disclaimer</a>
           <span className={styles.separator}>•</span>
-          <Link href="/affiliate-terms" className={styles.link}>
+          <Link href={getMainSiteUrl('/affiliate-terms')} className={styles.link}>
             Affiliate Terms
           </Link>
           <span className={styles.separator}>•</span>
-          <Link href="/affiliate-faq" className={styles.link}>
+          <Link href={getMainSiteUrl('/affiliate-faq')} className={styles.link}>
             Affiliate FAQ
           </Link>
           <span className={styles.separator}>•</span>

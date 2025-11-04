@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { createRateLimit, rateLimitConfigs } from '../../middleware/rateLimit';
 import { handleApiError } from '../../utils/errorHandler';
-import { uploadJSON, getFileUrl } from '../../lib/ardrive';
+import { uploadJSONWithFallback } from '../../lib/uploadService';
 
 // Security configuration
 const MAX_METADATA_SIZE = 1024 * 1024; // 1MB for metadata
@@ -67,12 +67,12 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.status(400).json({ error: validation.error });
     }
 
-    const transactionId = await uploadJSON(metadata);
+    const result = await uploadJSONWithFallback(metadata);
 
     return res.status(200).json({
       success: true,
-      ipfsHash: transactionId,
-      ipfsUrl: getFileUrl(transactionId)
+      ipfsHash: result.hash,
+      ipfsUrl: result.url
     });
 
   } catch (error) {

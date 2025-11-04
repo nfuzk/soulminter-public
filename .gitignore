@@ -42,11 +42,6 @@ certificates
 # Wallet files - NEVER COMMIT THESE
 wallets/
 *.json
-!package.json
-!package-lock.json
-!tsconfig.json
-!next-sitemap.config.js
-!next-sitemap.cjs
 
 # Database files
 *.db
