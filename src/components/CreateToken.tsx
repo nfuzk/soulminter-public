@@ -34,7 +34,6 @@ import styles from "../views/create/styles.module.css";
 import { FEE_CONFIG, UPLOAD_CONFIG, FEATURES, ERROR_MESSAGES } from '../config';
 import { validateTokenName, validateTokenSymbol, validateTokenDecimals, validateInitialSupply, validateTokenDescription, validateCustomMintPattern } from '../utils/validation';
 import { getSolanaNetwork } from '../utils/getSolanaNetwork';
-import { useMobileDetection } from '../utils/mobileDetection';
 import bs58 from "bs58";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
@@ -57,7 +56,7 @@ const LoadingStep = {
 };
 
 // Modern Custom Switch Component
-const ModernSwitch = ({ checked, onChange, id, label }) => (
+const ModernSwitch = ({ checked, onChange, id, label, disabled = false }) => (
   <div className={styles.modernSwitch}>
     <label className={styles.switchLabel}>
       <input 
@@ -66,6 +65,7 @@ const ModernSwitch = ({ checked, onChange, id, label }) => (
         checked={checked} 
         onChange={onChange} 
         className={styles.switchInput} 
+        disabled={disabled}
       />
       <div className={styles.switchTrack}>
         <div className={styles.switchThumb}></div>
@@ -112,8 +112,6 @@ export const CreateToken: FC = () => {
   const { makeAuthenticatedRequest } = useSimpleWalletAuth();
   const secureRPC = useSecureRPC();
   const router = useRouter();
-  const isMobile = useMobileDetection();
-
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [tokenName, setTokenName] = useState("");
   const [tokenSymbol, setTokenSymbol] = useState("");
@@ -169,6 +167,8 @@ export const CreateToken: FC = () => {
   };
 
   const handleImageChange = (event) => {
+    if (!publicKey) return;
+    
     const file = event.target.files[0];
     if (!file) return;
 
@@ -925,32 +925,16 @@ export const CreateToken: FC = () => {
       )}
 
       <div className={styles.tokenForm}>
-        {!publicKey ? (
+        {!publicKey && !tokenMintAddress && (
           <div className={styles.walletConnectCard}>
             <div className={styles.walletIcon}>🔗</div>
             <h2 className={styles.walletTitle}>Connect Your Wallet</h2>
             <p className={styles.walletSubtitle}>Please connect your wallet to create a token.</p>
           </div>
-        ) : null}
-
-        {/* Mobile Wallet Warning */}
-        {isMobile && (
-          <div className={styles.mobileWarning}>
-            <div className={styles.warningIcon}>⚠️</div>
-            <div className={styles.warningContent}>
-              <h3 className={styles.warningTitle}>Mobile Device Detected</h3>
-              <p className={styles.warningText}>
-                Currently, you&apos;ll need to use your wallet&apos;s built-in browser to connect to this dApp. 
-                We&apos;re working on implementing mobile wallet adapter support for a better mobile experience.
-              </p>
-              <p className={styles.warningSubtext}>
-                For the best experience, please use your wallet&apos;s browser or switch to a desktop device.
-              </p>
-            </div>
-          </div>
         )}
+
       
-      {publicKey && !tokenMintAddress && (
+      {!tokenMintAddress && (
         <div className={styles.formSections}>
           {/* Basic Token Information */}
           <div className={styles.formSection}>
@@ -976,6 +960,7 @@ export const CreateToken: FC = () => {
                     onChange={handleImageChange}
                   accept="image/*"
                   className={styles.fileInput}
+                  disabled={!publicKey}
                   />
               </div>
               <div className={styles.basicFields}>
@@ -987,6 +972,7 @@ export const CreateToken: FC = () => {
                     value={tokenName}
                     onChange={(e) => setTokenName(e.target.value)}
                     placeholder="Enter token name"
+                    disabled={!publicKey}
                   />
                 </div>
                 <div className={styles.formGroup}>
@@ -997,6 +983,7 @@ export const CreateToken: FC = () => {
                     value={tokenSymbol}
                     onChange={(e) => setTokenSymbol(e.target.value)}
                     placeholder="Enter token symbol (e.g., SOL)"
+                    disabled={!publicKey}
                   />
                 </div>
                 <div className={styles.formGroup}>
@@ -1006,6 +993,7 @@ export const CreateToken: FC = () => {
                     value={tokenDescription}
                     onChange={(e) => setTokenDescription(e.target.value)}
                     placeholder="Describe your token"
+                    disabled={!publicKey}
                   />
                 </div>
                 </div>
@@ -1024,6 +1012,7 @@ export const CreateToken: FC = () => {
                     value={tokenDecimals}
                     onChange={(e) => setTokenDecimals(e.target.value)}
                   placeholder="9"
+                    disabled={!publicKey}
                   />
                 </div>
               <div className={styles.formGroup}>
@@ -1034,6 +1023,7 @@ export const CreateToken: FC = () => {
                     value={initialMintAmount}
                     onChange={(e) => setInitialMintAmount(e.target.value)}
                   placeholder="0"
+                    disabled={!publicKey}
                   />
                 </div>
               </div>
@@ -1043,21 +1033,24 @@ export const CreateToken: FC = () => {
               <div className={styles.optionsGrid}>
                 <ModernSwitch
                   checked={revokeMintAuthority}
-                  onChange={() => setRevokeMintAuthority(!revokeMintAuthority)}
+                  onChange={() => !publicKey ? null : setRevokeMintAuthority(!revokeMintAuthority)}
                   id="revoke-mint"
                   label="Revoke Mint Authority"
+                  disabled={!publicKey}
                 />
                 <ModernSwitch
                   checked={revokeFreezeAuthority}
-                  onChange={() => setRevokeFreezeAuthority(!revokeFreezeAuthority)}
+                  onChange={() => !publicKey ? null : setRevokeFreezeAuthority(!revokeFreezeAuthority)}
                   id="revoke-freeze"
                   label="Revoke Freeze Authority"
+                  disabled={!publicKey}
                 />
                 <ModernSwitch
                   checked={makeMetadataImmutable}
-                  onChange={() => setMakeMetadataImmutable(!makeMetadataImmutable)}
+                  onChange={() => !publicKey ? null : setMakeMetadataImmutable(!makeMetadataImmutable)}
                   id="immutable-metadata"
                   label="Make Metadata Immutable"
+                  disabled={!publicKey}
                 />
                 </div>
               </div>
@@ -1067,9 +1060,10 @@ export const CreateToken: FC = () => {
           <div className={styles.formSection}>
             <ModernSwitch
               checked={isSocialLinksEnabled}
-              onChange={() => setIsSocialLinksEnabled(!isSocialLinksEnabled)}
+              onChange={() => !publicKey ? null : setIsSocialLinksEnabled(!isSocialLinksEnabled)}
               id="social-links"
               label="Add Social Links"
+              disabled={!publicKey}
             />
                 {isSocialLinksEnabled && (
               <div className={styles.socialLinksGrid}>
@@ -1081,6 +1075,7 @@ export const CreateToken: FC = () => {
                         value={websiteUrl}
                         onChange={(e) => setWebsiteUrl(e.target.value)}
                     placeholder="https://your-website.com"
+                        disabled={!publicKey}
                       />
                     </div>
                 <div className={styles.formGroup}>
@@ -1091,6 +1086,7 @@ export const CreateToken: FC = () => {
                         value={telegramUrl}
                         onChange={(e) => setTelegramUrl(e.target.value)}
                     placeholder="https://t.me/your-group"
+                        disabled={!publicKey}
                       />
                     </div>
                 <div className={styles.formGroup}>
@@ -1101,6 +1097,7 @@ export const CreateToken: FC = () => {
                         value={xUrl}
                         onChange={(e) => setXUrl(e.target.value)}
                     placeholder="https://x.com/your-handle"
+                        disabled={!publicKey}
                       />
                     </div>
                   </div>
@@ -1111,9 +1108,10 @@ export const CreateToken: FC = () => {
           <div className={styles.formSection}>
             <ModernSwitch
               checked={isCreatorInfoEnabled}
-              onChange={() => setIsCreatorInfoEnabled(!isCreatorInfoEnabled)}
+              onChange={() => !publicKey ? null : setIsCreatorInfoEnabled(!isCreatorInfoEnabled)}
               id="creator-info"
               label="Add Creator Information"
+              disabled={!publicKey}
             />
                 {isCreatorInfoEnabled && (
               <div className={styles.creatorGrid}>
@@ -1125,6 +1123,7 @@ export const CreateToken: FC = () => {
                         value={creatorName}
                         onChange={(e) => setCreatorName(e.target.value)}
                     placeholder="Your name or project name"
+                        disabled={!publicKey}
                       />
                     </div>
                     <div className={styles.formGroup}>
@@ -1135,6 +1134,7 @@ export const CreateToken: FC = () => {
                         value={creatorWebsite}
                         onChange={(e) => setCreatorWebsite(e.target.value)}
                     placeholder="https://your-website.com"
+                        disabled={!publicKey}
                       />
                     </div>
                     <div className={styles.formGroup}>
@@ -1145,6 +1145,7 @@ export const CreateToken: FC = () => {
                         value={creatorTwitter}
                         onChange={(e) => setCreatorTwitter(e.target.value)}
                     placeholder="@your-handle"
+                        disabled={!publicKey}
                       />
                     </div>
                     <div className={styles.formGroup}>
@@ -1155,6 +1156,7 @@ export const CreateToken: FC = () => {
                         value={creatorWallet}
                         onChange={(e) => setCreatorWallet(e.target.value)}
                         placeholder={publicKey ? publicKey.toString() : "Enter wallet address"}
+                        disabled={!publicKey}
                       />
                     </div>
                   </div>
@@ -1165,9 +1167,10 @@ export const CreateToken: FC = () => {
           <div className={styles.formSection}>
             <ModernSwitch
               checked={isCustomMintEnabled}
-              onChange={() => setIsCustomMintEnabled(!isCustomMintEnabled)}
+              onChange={() => !publicKey ? null : setIsCustomMintEnabled(!isCustomMintEnabled)}
               id="custom-mint"
               label="Custom Mint Address Pattern"
+              disabled={!publicKey}
             />
                 {isCustomMintEnabled && (
               <div className={styles.customMintGrid}>
@@ -1180,6 +1183,7 @@ export const CreateToken: FC = () => {
                          value={customMintPattern}
                          onChange={e => setCustomMintPattern(e.target.value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 2))}
                      placeholder="AB"
+                         disabled={!publicKey}
                        />
                      </div>
                 <div className={styles.formGroup}>
@@ -1188,6 +1192,7 @@ export const CreateToken: FC = () => {
                         className={styles.input}
                         value={customMintPatternType}
                         onChange={e => setCustomMintPatternType(e.target.value)}
+                        disabled={!publicKey}
                       >
                         <option value="prefix">Prefix</option>
                         <option value="suffix">Suffix</option>
@@ -1236,9 +1241,9 @@ export const CreateToken: FC = () => {
               <button
               className={`${styles.btn} ${styles.btnPrimary}`}
                 onClick={handleCreateToken}
-              disabled={isLoading || isSubmitting}
+              disabled={!publicKey || isLoading || isSubmitting}
               >
-                {isLoading ? "Creating..." : "Create Token (0.2 SOL fee)"}
+                {!publicKey ? "Connect Wallet to Create Token" : isLoading ? "Creating..." : "Create Token (0.2 SOL fee)"}
               </button>
             </div>
           </div>

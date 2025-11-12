@@ -13,9 +13,17 @@ import ConditionalAnalytics from "../components/ConditionalAnalytics";
 import ConditionalGoogleFonts from "../components/ConditionalGoogleFonts";
 import GoogleAnalytics from "../components/GoogleAnalytics";
 import { AffiliateTracker } from "../components/AffiliateTracker";
+import { WalletTracker } from "../components/WalletTracker";
 
 import "@solana/wallet-adapter-react-ui/styles.css";
 import '../styles/globals.css';
+import { registerMobileWalletAdapter } from '../utils/mobileWalletAdapter';
+
+// Register MWA BEFORE any components render
+// This ensures MWA is available when WalletProvider scans for wallets
+if (typeof window !== 'undefined') {
+  registerMobileWalletAdapter();
+}
 
 const App: FC<AppProps> = ({ Component, pageProps }) => {
   return (
@@ -36,6 +44,7 @@ const App: FC<AppProps> = ({ Component, pageProps }) => {
         <NotificationsProvider>
           <ContextProvider>
             <AffiliateTracker />
+            <WalletTracker />
             <div className="min-h-screen flex flex-col">
               <Notifications />
               <AppBar />

@@ -175,6 +175,19 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
+.input:disabled,
+.textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.input:disabled::placeholder,
+.textarea:disabled::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
 .textarea {
   min-height: 80px;
     resize: vertical;
@@ -541,13 +554,15 @@
 }
 
 .walletConnectCard {
-  background: rgba(255, 255, 255, 0.05);
+  background: linear-gradient(135deg, rgba(153, 69, 255, 0.15) 0%, rgba(20, 241, 149, 0.15) 100%);
   border-radius: 16px;
-  padding: 40px 30px;
+  padding: 20px 30px;
   text-align: center;
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  margin-bottom: 20px;
+  border: 2px solid rgba(153, 69, 255, 0.3);
+  margin-bottom: 25px;
+  box-shadow: 0 8px 20px rgba(153, 69, 255, 0.2);
+  animation: slideInDown 0.5s ease-out;
 }
 
 .walletIcon {
@@ -568,49 +583,6 @@
   color: rgba(255, 255, 255, 0.7);
 }
 
-/* Mobile Warning Styles */
-.mobileWarning {
-  background: linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 152, 0, 0.1) 100%);
-  border: 1px solid rgba(255, 193, 7, 0.3);
-  border-radius: 16px;
-  padding: 20px;
-  margin-bottom: 20px;
-  backdrop-filter: blur(10px);
-  display: flex;
-  align-items: flex-start;
-  gap: 15px;
-  animation: slideInDown 0.5s ease-out;
-}
-
-.warningIcon {
-  font-size: 1.5rem;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.warningContent {
-  flex: 1;
-}
-
-.warningTitle {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #FFC107;
-  margin-bottom: 8px;
-}
-
-.warningText {
-  font-size: 0.95rem;
-  color: rgba(255, 255, 255, 0.9);
-  margin-bottom: 8px;
-  line-height: 1.5;
-}
-
-.warningSubtext {
-  font-size: 0.9rem;
-  color: rgba(255, 193, 7, 0.8);
-  font-style: italic;
-}
 
 /* Form Sections */
 .formSections {
@@ -709,6 +681,16 @@
   cursor: pointer;
 }
 
+.fileInput:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.imagePreview:has(.fileInput:disabled) {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .basicFields {
     display: flex;
     flex-direction: column;
@@ -801,6 +783,37 @@
 
 .switchInput:checked + .switchTrack .switchThumb {
   transform: translateX(20px);
+}
+
+.switchInput:disabled + .switchTrack {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.switchInput:disabled + .switchTrack .switchThumb {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.switchInput:disabled ~ .switchText {
+  opacity: 0.6;
+}
+
+.switchLabel {
+  cursor: pointer;
+}
+
+.switchInput:disabled ~ .switchText,
+.switchInput:disabled + .switchTrack {
+  cursor: not-allowed;
+}
+
+.switchInput:disabled ~ .switchText {
+  cursor: not-allowed;
+}
+
+.modernSwitch:has(.switchInput:disabled) .switchLabel {
+  cursor: not-allowed;
 }
 
 .switchText {

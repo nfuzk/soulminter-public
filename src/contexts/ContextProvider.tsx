@@ -11,6 +11,7 @@ import { FC, ReactNode, useCallback, useMemo, useEffect } from "react";
 import { AutoConnectProvider, useAutoConnect } from "./AutoConnectProvider";
 import { notify } from "../utils/notifications";
 import { getSolanaNetwork } from '../utils/getSolanaNetwork';
+import { registerMobileWalletAdapter } from '../utils/mobileWalletAdapter';
 
 const WalletStateResetter: FC = () => {
   const { connected } = useWallet();
@@ -26,6 +27,12 @@ const WalletStateResetter: FC = () => {
 const WalletContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const { autoConnect } = useAutoConnect();
   const network = getSolanaNetwork() as WalletAdapterNetwork;
+  
+  // MWA registration is now handled in _app.tsx before this component renders
+  // This ensures MWA is available when WalletProvider scans for wallets
+  
+  // Auto-connect is controlled by the user via the settings toggle
+  // The toggle in the settings menu allows users to enable/disable auto-connect
   
   // Configure wallets
   const wallets = useMemo(
@@ -55,13 +62,55 @@ const WalletContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
   );
 
   const onError = useCallback((error: WalletError) => {
+    console.error('Wallet error:', error);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      toString: String(error),
+    });
+    
+    // Handle WalletAccountError - usually from auto-connect attempts with MWA
+    if (error.name === 'WalletAccountError' || error.message?.includes('WalletAccountError')) {
+      console.warn('WalletAccountError - likely from auto-connect attempt with MWA');
+      // Clear stored wallet to prevent future auto-connect attempts
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('walletName');
+        localStorage.removeItem('wallet-adapter-react-connection');
+      }
+      // Don't show error to user - just silently fail
+      return;
+    }
+    
+    // Handle WebSocket connection errors - critical for MWA
+    if (error.message?.includes('websocket') || error.message?.includes('localhost') || error.message?.includes('ws://')) {
+      console.error('MWA WebSocket connection error:', error.message);
+      notify({
+        type: "error",
+        message: "Failed to establish connection with wallet app. Please ensure your wallet app is open and try again.",
+        persistent: true,
+      });
+      return;
+    }
+    
     // Suppress notification for user rejection
     if (
       (error.message && error.message.toLowerCase().includes("user rejected the request")) ||
       (error.name === 'WalletConnectionError' && error.message && error.message.toLowerCase().includes('connection rejected'))
     ) {
+      console.log('User rejected connection - suppressing notification');
       return;
     }
+    
+    // Check for MWA-specific errors
+    if (error.message?.includes('no installed wallet') || error.message?.includes('mobile wallet protocol')) {
+      notify({
+        type: "error",
+        message: "No wallet app found that supports Mobile Wallet Adapter. Please ensure Phantom or Solflare is installed.",
+        persistent: true,
+      });
+      return;
+    }
+    
     // Phantom wallet not installed: redirect and notify
     if (error.name === 'WalletNotReadyError' || error.message?.includes('Phantom')) {
       window.open('https://phantom.app/download', '_blank');
@@ -72,11 +121,13 @@ const WalletContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
       });
       return;
     }
+    
+    // Show all other errors
     notify({
       type: "error",
       message: error.message ? `${error.name}: ${error.message}` : error.name,
+      persistent: true,
     });
-    console.error(error);
   }, []);
 
   return (

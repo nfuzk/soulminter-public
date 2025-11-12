@@ -4,15 +4,12 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import styles from "./styles.module.css";
 import { AffiliateLink } from "../../components/AffiliateLink";
-import { useMobileDetection } from "../../utils/mobileDetection";
 
 export const HomeView: FC = ({}) => {
   const { publicKey, connect, disconnect } = useWallet();
   const router = useRouter();
   const [visibleItems, setVisibleItems] = useState<Set<string>>(new Set());
   const observerRef = useRef<IntersectionObserver | null>(null);
-  const isMobile = useMobileDetection();
-
   const handleConnectWallet = () => {
     if (publicKey) {
       disconnect();
@@ -78,26 +75,6 @@ export const HomeView: FC = ({}) => {
           </div>
         </section>
 
-        {/* Mobile Wallet Warning */}
-        {isMobile && (
-          <section className={styles.mobileWarningSection}>
-            <div className={styles.container}>
-              <div className={styles.mobileWarning}>
-                <div className={styles.warningIcon}>⚠️</div>
-                <div className={styles.warningContent}>
-                  <h2 className={styles.warningTitle}>Mobile Device Detected</h2>
-                  <p className={styles.warningText}>
-                    Currently, you&apos;ll need to use your wallet&apos;s built-in browser to connect to this dApp. 
-                    We&apos;re working on implementing mobile wallet adapter support for a better mobile experience.
-                  </p>
-                  <p className={styles.warningSubtext}>
-                    For the best experience, please use your wallet&apos;s browser or switch to a desktop device.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
-        )}
 
         <section id="features" className={styles.features}>
           <div className={styles.container}>
