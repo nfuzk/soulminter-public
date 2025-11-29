@@ -137,7 +137,23 @@ const nextConfig = {
           {
             key: 'X-XSS-Protection',
             value: '1; mode=block'
-          },
+          }
+        ]
+      },
+      {
+        // Static assets should be cached aggressively
+        source: '/_next/static/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable'
+          }
+        ]
+      },
+      {
+        // Static files in public folder should be cached
+        source: '/:path*\\.(ico|png|jpg|jpeg|svg|gif|webp|avif|woff|woff2|ttf|eot|css|js)',
+        headers: [
           {
             key: 'Cache-Control',
             value: 'public, max-age=31536000, immutable'
@@ -154,11 +170,21 @@ const nextConfig = {
         ]
       },
       {
-        source: '/_next/static/(.*)',
+        // HTML pages should not be cached aggressively to allow updates
+        // This pattern matches all pages (more specific patterns above take precedence)
+        source: '/:path*',
         headers: [
           {
             key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable'
+            value: 'no-cache, no-store, must-revalidate, max-age=0'
+          },
+          {
+            key: 'Pragma',
+            value: 'no-cache'
+          },
+          {
+            key: 'Expires',
+            value: '0'
           }
         ]
       }

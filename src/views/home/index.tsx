@@ -9,6 +9,7 @@ export const HomeView: FC = ({}) => {
   const { publicKey, connect, disconnect } = useWallet();
   const router = useRouter();
   const [visibleItems, setVisibleItems] = useState<Set<string>>(new Set());
+  const [isMounted, setIsMounted] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const handleConnectWallet = () => {
     if (publicKey) {
@@ -19,6 +20,12 @@ export const HomeView: FC = ({}) => {
   };
 
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+    
     // Initialize Intersection Observer
     observerRef.current = new IntersectionObserver(
       (entries) => {
@@ -48,7 +55,7 @@ export const HomeView: FC = ({}) => {
     return () => {
       observerRef.current?.disconnect();
     };
-  }, []);
+  }, [isMounted]);
 
   const handleCreateClick = () => {
     router.push('/create');
@@ -81,37 +88,37 @@ export const HomeView: FC = ({}) => {
             <h2>Why Choose SoulMinter?</h2>
             <div className={styles.featuresGrid}>
               <div 
-                className={`${styles.featureItem} ${visibleItems.has('feature-0') ? styles.featureItemVisible : ''}`}
+                className={`${styles.featureItem} ${isMounted && visibleItems.has('feature-0') ? styles.featureItemVisible : ''}`}
               >
                 <h3><span className={styles.icon}>🔒</span> Secure & Immutable</h3>
                 <p>Mint and freeze authorities can be revoked for free, ensuring maximum security and trust for your holders.</p>
               </div>
               <div 
-                className={`${styles.featureItem} ${visibleItems.has('feature-1') ? styles.featureItemVisible : ''}`}
+                className={`${styles.featureItem} ${isMounted && visibleItems.has('feature-1') ? styles.featureItemVisible : ''}`}
               >
                 <h3><span className={styles.icon}>💻</span> No Code Needed</h3>
                 <p>Forget complex programming. Our intuitive interface allows anyone to generate a Solana token with just a few clicks.</p>
               </div>
               <div 
-                className={`${styles.featureItem} ${visibleItems.has('feature-2') ? styles.featureItemVisible : ''}`}
+                className={`${styles.featureItem} ${isMounted && visibleItems.has('feature-2') ? styles.featureItemVisible : ''}`}
               >
                 <h3><span className={styles.icon}>💰</span> Ultra-Low Fees</h3>
                 <p>Launch your token for just 0.2 SOL, one of the most competitive rates available. Get started without breaking the bank.</p>
               </div>
               <div 
-                className={`${styles.featureItem} ${visibleItems.has('feature-3') ? styles.featureItemVisible : ''}`}
+                className={`${styles.featureItem} ${isMounted && visibleItems.has('feature-3') ? styles.featureItemVisible : ''}`}
               >
                 <h3><span className={styles.icon}>🎯</span> Earn While You Share</h3>
                 <p>Join our affiliate program and earn 50% commission (0.1 SOL) for every successful referral. Turn your network into passive income with lifetime earnings. <Link href="/affiliate" className="text-purple-400 hover:text-purple-300 underline">Join our affiliate program</Link>.</p>
               </div>
               <div 
-                className={`${styles.featureItem} ${visibleItems.has('feature-4') ? styles.featureItemVisible : ''}`}
+                className={`${styles.featureItem} ${isMounted && visibleItems.has('feature-4') ? styles.featureItemVisible : ''}`}
               >
                 <h3><span className={styles.icon}>⚙️</span> Advanced Customization</h3>
-                <p>Custom mint addresses, creator metadata, social links, and vanity patterns. Make your token truly unique with professional branding. <Link href="/create" className="text-purple-400 hover:text-purple-300 underline">Try our token creation tool</Link>.</p>
+                <p>Custom mint addresses and social links. Make your token truly unique with professional branding. <Link href="/create" className="text-purple-400 hover:text-purple-300 underline">Try our token creation tool</Link>.</p>
               </div>
               <div 
-                className={`${styles.featureItem} ${visibleItems.has('feature-5') ? styles.featureItemVisible : ''}`}
+                className={`${styles.featureItem} ${isMounted && visibleItems.has('feature-5') ? styles.featureItemVisible : ''}`}
               >
                 <h3><span className={styles.icon}>🌐</span> Arweave Metadata Storage</h3>
                 <p>Your token metadata is securely stored on Arweave with automatic image upload. Permanent, decentralized storage ensures your token information never gets lost.</p>
@@ -127,16 +134,16 @@ export const HomeView: FC = ({}) => {
               Creating a Solana token has never been easier. Follow these four simple steps to launch your project on the blockchain in minutes.
             </p>
             <ol className={styles.stepsList}>
-              <li className={`${styles.stepItem} ${visibleItems.has('step-0') ? styles.stepItemVisible : ''}`}>
+              <li className={`${styles.stepItem} ${isMounted && visibleItems.has('step-0') ? styles.stepItemVisible : ''}`}>
                 Connect your Solana Wallet (Phantom, Solflare, etc.) to get started with the token creation process.
               </li>
-              <li className={`${styles.stepItem} ${visibleItems.has('step-1') ? styles.stepItemVisible : ''}`}>
+              <li className={`${styles.stepItem} ${isMounted && visibleItems.has('step-1') ? styles.stepItemVisible : ''}`}>
                 Fill in your token details including Name, Symbol, Decimals, and Supply to customize your token.
               </li>
-              <li className={`${styles.stepItem} ${visibleItems.has('step-2') ? styles.stepItemVisible : ''}`}>
+              <li className={`${styles.stepItem} ${isMounted && visibleItems.has('step-2') ? styles.stepItemVisible : ''}`}>
                 Confirm the transaction with our low 0.2 SOL fee plus minimal network fees for deployment.
               </li>
-              <li className={`${styles.stepItem} ${visibleItems.has('step-3') ? styles.stepItemVisible : ''}`}>
+              <li className={`${styles.stepItem} ${isMounted && visibleItems.has('step-3') ? styles.stepItemVisible : ''}`}>
                 Receive your token instantly! Optionally revoke authorities for free to ensure maximum security.
               </li>
             </ol>

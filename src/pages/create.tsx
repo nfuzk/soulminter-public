@@ -4,7 +4,7 @@ import { CreateView } from "../views";
 
 const siteUrl = "https://soulminter.io/create";
 const siteTitle = "Create a Solana Token – SoulMinter";
-const siteDescription = "Create your own Solana token instantly with SoulMinter. No coding required. Secure, fast, and easy token creation for everyone.";
+const siteDescription = "Create SPL tokens on Solana in minutes. No coding needed. Launch your custom token with metadata, images, and full control. Start for 0.2 SOL.";
 const siteImage = "https://pink-abstract-gayal-682.mypinata.cloud/ipfs/bafybeieue5otjvplqi2exrkdaxwdmjwsa2c7obiheim4wilcj6tleq63n4";
 
 const Create: NextPage = (props) => {
@@ -13,7 +13,7 @@ const Create: NextPage = (props) => {
       <Head>
         <title>{siteTitle}</title>
         <meta name="description" content={siteDescription} />
-        <meta name="keywords" content="Solana token creator, SPL token, create Solana token, no-code token creation, crypto token maker, SoulMinter, Solana token launch, token generator, blockchain token, DeFi token, custom token, token minting" />
+        <meta name="keywords" content="create SPL token, Solana token maker, no-code token creator, custom Solana token, token minting tool, instant token creation, Solana token generator, launch SPL token" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="index, follow" />
         <meta name="language" content="en" />

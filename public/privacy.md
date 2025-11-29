@@ -1,10 +1,10 @@
 # Privacy Policy
 
-**Last Updated: September 2025**
+**Last Updated: November 2025**
 
 ## 1. Our Commitment to Your Privacy and Data Minimization
 
-At SoulMinter ("we," "us," or "our"), your privacy is paramount. This Privacy Policy outlines our practices regarding the collection, use, and processing of information when you use our web-based platform (the "Platform") to create custom tokens on the Solana blockchain. Our platform is built on the principle of data minimization, meaning we primarily interact with information essential for the technical operation of our service, which includes public blockchain data, technical identifiers, and certain usage data collected via analytics.
+At SoulMinter ("we," "us," or "our"), your privacy is paramount. This Privacy Policy outlines our practices regarding the collection, use, and processing of information when you use our web-based platform (the "Platform") to create and manage custom tokens on the Solana blockchain. Our platform is built on the principle of data minimization, meaning we primarily interact with information essential for the technical operation of our service, which includes public blockchain data, technical identifiers, and certain usage data collected via analytics.
 
 We are committed to transparency and compliance with global data protection principles, including the General Data Protection Regulation (GDPR) (EU) 2016/679 and the California Consumer Privacy Act (CCPA). While our core service is designed to operate without collecting directly identifiable personal data, we acknowledge that certain technical information and analytics data may be considered personal data under these regulations. This policy explains how we handle such information and your rights concerning it.
 
@@ -22,11 +22,11 @@ SoulMinter is engineered to function with minimal collection of personal data. W
 
 ### 3.1. Public Wallet Addresses
 
-When you connect your Solana-compatible wallet to the Platform, your public wallet address is transmitted. This is a public identifier on the blockchain, essential for enabling your interaction with the Solana network to create tokens and for the functionality of our affiliate program. We never collect, store, or have access to your private keys, seed phrases, or any other sensitive wallet information. Your wallet remains entirely under your control.
+When you connect your Solana-compatible wallet to the Platform, your public wallet address is transmitted. This is a public identifier on the blockchain, essential for enabling your interaction with the Solana network to create or manage tokens and for the functionality of our affiliate program. We never collect, store, or have access to your private keys, seed phrases, or any other sensitive wallet information. Your wallet remains entirely under your control.
 
-### 3.2. Token Creation Details
+### 3.2. Token Creation and Management Details
 
-Information you provide to create a token, such as the token name, symbol, number of decimals, initial supply, and any optional metadata (e.g., description, website URL, social media links), is used to generate the token on the blockchain. This information is inherently public, as it forms part of the token's on-chain identity and metadata, and is generally not considered personal data.
+Information you provide to create a token (such as the token name, symbol, decimals, initial supply) or to manage an existing token (such as updating metadata or modifying authorities) is used to generate the respective transactions on the blockchain. This information is inherently public, as it forms part of the token's on-chain identity and metadata, and is generally not considered personal data.
 
 ### 3.3. Technical Connection Information
 
@@ -34,7 +34,7 @@ When you access the Platform, certain technical information is automatically tra
 
 - **IP Addresses:** Your IP address is used solely for immediate security purposes, such as real-time rate limiting to prevent abuse and denial-of-service attacks, and for general service stability. We do not store IP addresses in a way that links them to individual users, nor do we use them to identify you, track your browsing habits, or for marketing purposes.
 
-- **Blockchain Transaction Data:** All details of transactions you initiate on the Solana blockchain through our Platform (e.g., token creation transactions, fee payments, affiliate commission transfers) are publicly available and permanently recorded on the Solana blockchain. SoulMinter does not control the Solana blockchain, and all data on the blockchain is public and immutable.
+- **Blockchain Transaction Data:** All details of transactions you initiate on the Solana blockchain through our Platform (e.g., token creation, authority management, fee payments, affiliate commission transfers) are publicly available and permanently recorded on the Solana blockchain. SoulMinter does not control the Solana blockchain, and all data on the blockchain is public and immutable.
 
 - **Aggregated Usage Data:** We may gather anonymized and aggregated data about how the Platform is used (e.g., total number of tokens created, most frequently used features). This data cannot be linked back to any individual and is used purely for statistical analysis to improve our service.
 
@@ -62,7 +62,7 @@ We integrate with various third-party services that may interact with your devic
 
 Our use of information is strictly limited to the following technical, operational, and analytical purposes:
 
-- **To Facilitate Token Creation:** We use the public wallet address and token creation parameters you provide to enable the creation of tokens on the Solana blockchain as per your instructions.
+- **To Facilitate Token Services:** We use the public wallet address and parameters you provide to enable the creation, management, and modification of tokens on the Solana blockchain as per your instructions.
 
 - **To Manage the Affiliate Program:** We use public wallet addresses, referral data, and referrer cookies to track referrals and facilitate the direct, on-chain distribution of affiliate commissions, as designed by the Solana program. Referrer cookies help ensure that if a user navigates the site and later connects their wallet, the affiliate relationship is correctly attributed. This process does not involve the processing of personal data by SoulMinter beyond public wallet addresses and a referrer identifier stored in the cookie.
 

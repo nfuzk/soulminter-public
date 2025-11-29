@@ -23,6 +23,7 @@ import {
 } from "@solana/spl-token";
 import {
   createCreateMetadataAccountV3Instruction,
+  createUpdateMetadataAccountV2Instruction,
   PROGRAM_ID,
 } from "@metaplex-foundation/mpl-token-metadata";
 import { FC, useCallback, useState, useEffect, useRef } from "react";
@@ -125,11 +126,6 @@ export const CreateToken: FC = () => {
   const [revokeFreezeAuthority, setRevokeFreezeAuthority] = useState(false);
   const [makeMetadataImmutable, setMakeMetadataImmutable] = useState(false);
   const [isSocialLinksExpanded, setIsSocialLinksExpanded] = useState(false);
-  const [isCreatorInfoEnabled, setIsCreatorInfoEnabled] = useState(false);
-  const [creatorName, setCreatorName] = useState("");
-  const [creatorWebsite, setCreatorWebsite] = useState("");
-  const [creatorTwitter, setCreatorTwitter] = useState("");
-  const [creatorWallet, setCreatorWallet] = useState("");
   const [tokenMintAddress, setTokenMintAddress] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -404,32 +400,13 @@ export const CreateToken: FC = () => {
           }
         };
 
-        // Add creator information if provided
-        if (isCreatorInfoEnabled && (creatorName || creatorWebsite || creatorTwitter)) {
-          metadata.properties.creators = [{
-            name: creatorName || undefined,
-            website: creatorWebsite || undefined,
-            twitter: creatorTwitter || undefined
-          }];
-          
-          // Add creator info to attributes
+        // Add social links to attributes if provided
+        if (websiteUrl || telegramUrl || xUrl) {
           metadata.attributes = [
-            ...(creatorName ? [{ trait_type: "Creator", value: creatorName }] : []),
-            ...(creatorWebsite ? [{ trait_type: "Creator Website", value: creatorWebsite }] : []),
-            ...(creatorTwitter ? [{ trait_type: "Creator Twitter", value: creatorTwitter }] : []),
             ...(websiteUrl ? [{ trait_type: "Website", value: websiteUrl }] : []),
             ...(telegramUrl ? [{ trait_type: "Telegram", value: telegramUrl }] : []),
             ...(xUrl ? [{ trait_type: "Twitter", value: xUrl }] : [])
           ];
-        } else {
-          // Add social links to attributes if no creator info
-          if (websiteUrl || telegramUrl || xUrl) {
-            metadata.attributes = [
-              ...(websiteUrl ? [{ trait_type: "Website", value: websiteUrl }] : []),
-              ...(telegramUrl ? [{ trait_type: "Telegram", value: telegramUrl }] : []),
-              ...(xUrl ? [{ trait_type: "Twitter", value: xUrl }] : [])
-            ];
-          }
         }
 
         // Upload metadata JSON via server-side API
@@ -454,7 +431,16 @@ export const CreateToken: FC = () => {
 
       // Create mint account
       updateProgress(LoadingStep.CREATING_MINT);
-      const lamports = await getMinimumBalanceForRentExemptMint(connection);
+      // Use secureRPC instead of direct connection to avoid network errors
+      let lamports: number;
+      try {
+        lamports = await getMinimumBalanceForRentExemptMint(connection);
+      } catch (error: any) {
+        // Fallback: use secureRPC if direct connection fails
+        console.warn('Direct connection failed, using secureRPC fallback:', error);
+        const result = await secureRPC.callRPC('getMinimumBalanceForRentExemption', [MINT_SIZE]);
+        lamports = result;
+      }
       
       // Calculate total cost including creation fee and transaction fee
       const creationFeeLamports = LAMPORTS_PER_SOL * FEE_CONFIG.CREATION_FEE;
@@ -521,25 +507,8 @@ export const CreateToken: FC = () => {
         }
       }
 
-      // Prepare creators array for on-chain metadata
-      let creatorWalletAddress = null;
-      if (isCreatorInfoEnabled) {
-        if (creatorWallet && creatorWallet.trim().length > 0) {
-          creatorWalletAddress = creatorWallet.trim();
-        } else if (publicKey) {
-          creatorWalletAddress = publicKey.toString();
-        }
-      }
-      
-      const creatorsArray = creatorWalletAddress 
-        ? [
-            {
-              address: new PublicKey(creatorWalletAddress),
-              verified: true,
-              share: 100
-            }
-          ]
-        : null;
+      // No creators array - set to null
+      const creatorsArray = null;
 
       // Create transaction
       const tx = new Transaction();
@@ -607,8 +576,13 @@ export const CreateToken: FC = () => {
         )
       );
 
-      // Add metadata instruction with proper creator verification
+      // Add metadata instruction
       updateProgress(LoadingStep.ADDING_METADATA);
+      const burnAddress = new PublicKey('11111111111111111111111111111111');
+
+      // If immutable is requested, use burn address as update authority from the start
+      const updateAuthority = makeMetadataImmutable ? burnAddress : publicKey;
+
       tx.add(
         createCreateMetadataAccountV3Instruction(
           {
@@ -616,7 +590,7 @@ export const CreateToken: FC = () => {
             mint: mintKeypair.publicKey,
             mintAuthority: publicKey,
             payer: publicKey,
-            updateAuthority: publicKey,
+            updateAuthority: updateAuthority,
           },
           {
             createMetadataAccountArgsV3: {
@@ -699,19 +673,47 @@ export const CreateToken: FC = () => {
         
         // Get a fresh blockhash right before sending
         const { blockhash, lastValidBlockHeight } = await secureRPC.getLatestBlockhash('processed');
-      tx.recentBlockhash = blockhash;
-      tx.lastValidBlockHeight = lastValidBlockHeight;
+        tx.recentBlockhash = blockhash;
+        tx.lastValidBlockHeight = lastValidBlockHeight;
 
-      // First sign with mintKeypair
-      tx.partialSign(mintKeypair);
+        // Log transaction size before signing (for debugging)
+        const txSizeBeforeSigning = tx.serialize({ requireAllSignatures: false, verifySignatures: false }).length;
+        const txSizeLimit = 1232; // Solana's transaction size limit in bytes
+        const txSizePercent = (txSizeBeforeSigning / txSizeLimit) * 100;
+        console.log(`Transaction size: ${txSizeBeforeSigning} bytes (${txSizePercent.toFixed(2)}% of ${txSizeLimit} byte limit)`);
+        console.log(`Transaction instructions: ${tx.instructions.length}`);
+        if (txSizePercent > 80) {
+          console.warn(`⚠️ Transaction size is ${txSizePercent.toFixed(2)}% of limit - approaching Solana's size limit!`);
+        }
 
-      // Send transaction using Phantom's required signAndSendTransaction
-      if (!signTransaction) {
-        throw new Error('Wallet transaction methods not available');
-      }
+        // Simulate transaction before signing (as per Phantom's best practices)
+        try {
+          const simulationResult = await secureRPC.simulateTransaction(tx);
+          if (simulationResult.value?.err) {
+            throw new Error(`Transaction simulation failed: ${JSON.stringify(simulationResult.value.err)}`);
+          }
+          console.log('Transaction simulation successful');
+        } catch (simError: any) {
+          console.error('Transaction simulation error:', simError);
+          throw new Error(`Transaction simulation failed: ${simError.message}`);
+        }
 
-      const signedTx = await signTransaction(tx);
-      const rawTx = signedTx.serialize().toString('base64');
+        // Sign with Phantom wallet FIRST (as per Phantom's best practices)
+        if (!signTransaction) {
+          throw new Error('Wallet transaction methods not available');
+        }
+
+        const signedTx = await signTransaction(tx);
+
+        // THEN add mintKeypair signature
+        signedTx.partialSign(mintKeypair);
+
+        // Log final transaction size after signing
+        const signedTxBuffer = signedTx.serialize();
+        const rawTx = signedTxBuffer.toString('base64');
+        const finalTxSize = signedTxBuffer.length;
+        const finalTxSizePercent = (finalTxSize / txSizeLimit) * 100;
+        console.log(`Final transaction size: ${finalTxSize} bytes (${finalTxSizePercent.toFixed(2)}% of ${txSizeLimit} byte limit)`);
 
       // Send via secure RPC to Helius avoiding wallet adapter sendTransaction issues
       // Add timeout to prevent hanging transactions - increased for mainnet
@@ -1030,31 +1032,87 @@ export const CreateToken: FC = () => {
             
             <div className={styles.authorityOptions}>
               <h4 className={styles.optionsTitle}>Authority Settings</h4>
-              <div className={styles.optionsGrid}>
-                <ModernSwitch
-                  checked={revokeMintAuthority}
-                  onChange={() => !publicKey ? null : setRevokeMintAuthority(!revokeMintAuthority)}
-                  id="revoke-mint"
-                  label="Revoke Mint Authority"
-                  disabled={!publicKey}
-                />
-                <ModernSwitch
-                  checked={revokeFreezeAuthority}
-                  onChange={() => !publicKey ? null : setRevokeFreezeAuthority(!revokeFreezeAuthority)}
-                  id="revoke-freeze"
-                  label="Revoke Freeze Authority"
-                  disabled={!publicKey}
-                />
-                <ModernSwitch
-                  checked={makeMetadataImmutable}
-                  onChange={() => !publicKey ? null : setMakeMetadataImmutable(!makeMetadataImmutable)}
-                  id="immutable-metadata"
-                  label="Make Metadata Immutable"
-                  disabled={!publicKey}
-                />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Revoke Mint */}
+                <div
+                  onClick={() => !publicKey ? null : setRevokeMintAuthority(!revokeMintAuthority)}
+                  className={`relative rounded-xl border-2 p-4 cursor-pointer transition-all ${
+                    revokeMintAuthority
+                      ? 'border-purple-500 bg-purple-500/10 shadow-lg shadow-purple-500/20'
+                      : 'border-white/20 bg-white/5 hover:border-white/30 hover:bg-white/10'
+                  } ${!publicKey ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <h5 className="font-semibold text-sm">Revoke Mint Authority</h5>
+                    <div className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-colors">
+                      {revokeMintAuthority ? (
+                        <div className="w-full h-full rounded-full bg-purple-500 flex items-center justify-center">
+                          <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      ) : (
+                        <div className="w-full h-full rounded-full border border-white/30"></div>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-400 leading-relaxed">Permanently disables minting additional tokens. Cannot be undone.</p>
+                </div>
+
+                {/* Revoke Freeze */}
+                <div
+                  onClick={() => !publicKey ? null : setRevokeFreezeAuthority(!revokeFreezeAuthority)}
+                  className={`relative rounded-xl border-2 p-4 cursor-pointer transition-all ${
+                    revokeFreezeAuthority
+                      ? 'border-purple-500 bg-purple-500/10 shadow-lg shadow-purple-500/20'
+                      : 'border-white/20 bg-white/5 hover:border-white/30 hover:bg-white/10'
+                  } ${!publicKey ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <h5 className="font-semibold text-sm">Revoke Freeze Authority</h5>
+                    <div className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-colors">
+                      {revokeFreezeAuthority ? (
+                        <div className="w-full h-full rounded-full bg-purple-500 flex items-center justify-center">
+                          <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      ) : (
+                        <div className="w-full h-full rounded-full border border-white/30"></div>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-400 leading-relaxed">Prevents freezing token accounts. Cannot be undone.</p>
+                </div>
+
+                {/* Immutable Metadata */}
+                <div
+                  onClick={() => !publicKey ? null : setMakeMetadataImmutable(!makeMetadataImmutable)}
+                  className={`relative rounded-xl border-2 p-4 cursor-pointer transition-all ${
+                    makeMetadataImmutable
+                      ? 'border-purple-500 bg-purple-500/10 shadow-lg shadow-purple-500/20'
+                      : 'border-white/20 bg-white/5 hover:border-white/30 hover:bg-white/10'
+                  } ${!publicKey ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <h5 className="font-semibold text-sm">Make Metadata Immutable</h5>
+                    <div className="flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-colors">
+                      {makeMetadataImmutable ? (
+                        <div className="w-full h-full rounded-full bg-purple-500 flex items-center justify-center">
+                          <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      ) : (
+                        <div className="w-full h-full rounded-full border border-white/30"></div>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-400 leading-relaxed">Locks metadata and renounces update authority forever. Cannot be undone.</p>
                 </div>
               </div>
             </div>
+          </div>
 
           {/* Social Links */}
           <div className={styles.formSection}>
@@ -1104,64 +1162,6 @@ export const CreateToken: FC = () => {
                 )}
             </div>
 
-          {/* Creator Information */}
-          <div className={styles.formSection}>
-            <ModernSwitch
-              checked={isCreatorInfoEnabled}
-              onChange={() => !publicKey ? null : setIsCreatorInfoEnabled(!isCreatorInfoEnabled)}
-              id="creator-info"
-              label="Add Creator Information"
-              disabled={!publicKey}
-            />
-                {isCreatorInfoEnabled && (
-              <div className={styles.creatorGrid}>
-                    <div className={styles.formGroup}>
-                      <label className={styles.label}>Creator Name</label>
-                      <input
-                        className={styles.input}
-                        type="text"
-                        value={creatorName}
-                        onChange={(e) => setCreatorName(e.target.value)}
-                    placeholder="Your name or project name"
-                        disabled={!publicKey}
-                      />
-                    </div>
-                    <div className={styles.formGroup}>
-                      <label className={styles.label}>Creator Website</label>
-                      <input
-                        className={styles.input}
-                        type="url"
-                        value={creatorWebsite}
-                        onChange={(e) => setCreatorWebsite(e.target.value)}
-                    placeholder="https://your-website.com"
-                        disabled={!publicKey}
-                      />
-                    </div>
-                    <div className={styles.formGroup}>
-                      <label className={styles.label}>Creator Twitter</label>
-                      <input
-                        className={styles.input}
-                        type="text"
-                        value={creatorTwitter}
-                        onChange={(e) => setCreatorTwitter(e.target.value)}
-                    placeholder="@your-handle"
-                        disabled={!publicKey}
-                      />
-                    </div>
-                    <div className={styles.formGroup}>
-                  <label className={styles.label}>Creator Wallet</label>
-                      <input
-                        className={styles.input}
-                        type="text"
-                        value={creatorWallet}
-                        onChange={(e) => setCreatorWallet(e.target.value)}
-                        placeholder={publicKey ? publicKey.toString() : "Enter wallet address"}
-                        disabled={!publicKey}
-                      />
-                    </div>
-                  </div>
-                )}
-            </div>
 
           {/* Custom Mint Address */}
           <div className={styles.formSection}>
@@ -1226,29 +1226,29 @@ export const CreateToken: FC = () => {
                 )}
             </div>
 
-            {/* Create Button */}
+          {/* Create Button */}
           <div className={styles.createSection}>
             <div className={styles.termsText}>
               By clicking create, you agree to our{' '}
               <a href="/terms" className={styles.termsLink} target="_blank" rel="noopener noreferrer">
-                  Terms of Service
-                </a>
-                {' '}and{' '}
+                Terms of Service
+              </a>
+              {' '}and{' '}
               <a href="/privacy" className={styles.termsLink} target="_blank" rel="noopener noreferrer">
-                  Privacy Policy
-                </a>
-              </div>
-              <button
-              className={`${styles.btn} ${styles.btnPrimary}`}
-                onClick={handleCreateToken}
-              disabled={!publicKey || isLoading || isSubmitting}
-              >
-                {!publicKey ? "Connect Wallet to Create Token" : isLoading ? "Creating..." : "Create Token (0.2 SOL fee)"}
-              </button>
+                Privacy Policy
+              </a>
             </div>
+            <button
+              className={`${styles.btn} ${styles.btnPrimary}`}
+              onClick={handleCreateToken}
+              disabled={!publicKey || isLoading || isSubmitting}
+            >
+              {!publicKey ? "Connect Wallet to Create Token" : isLoading ? "Creating..." : "Create Token (0.2 SOL fee)"}
+            </button>
           </div>
+        </div>
       )}
-      
+
       {publicKey && tokenMintAddress && !isLoading && (
         <div className={styles.successMessage}>
           <h3 className={styles.successTitle}>Token Created Successfully!</h3>

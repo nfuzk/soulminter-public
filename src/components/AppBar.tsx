@@ -232,6 +232,9 @@ export const AppBar: FC = () => {
         <Link href={getMainSiteUrl('/create')} className="btn btn-ghost">
           Create Token
         </Link>
+        <Link href={getMainSiteUrl('/manage-token')} className="btn btn-ghost">
+          Manage Tokens
+        </Link>
         <Link href={getMainSiteUrl('/affiliate')} className="btn btn-ghost">
           Affiliate
         </Link>
@@ -294,6 +297,9 @@ export const AppBar: FC = () => {
             </Link>
             <Link href={getMainSiteUrl('/create')} className="btn btn-ghost w-full mb-1" onClick={() => setMenuOpen(false)}>
               Create Token
+            </Link>
+            <Link href={getMainSiteUrl('/manage-token')} className="btn btn-ghost w-full mb-1" onClick={() => setMenuOpen(false)}>
+              Manage Tokens
             </Link>
             <Link href={getMainSiteUrl('/affiliate')} className="btn btn-ghost w-full mb-1" onClick={() => setMenuOpen(false)}>
               Affiliate
