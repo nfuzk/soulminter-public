@@ -4,10 +4,10 @@ import { CreateView } from "../views";
 
 const siteUrl = "https://soulminter.io/create";
 const siteTitle = "Create a Solana Token – SoulMinter";
-const siteDescription = "Create SPL tokens on Solana in minutes. No coding needed. Launch your custom token with metadata, images, and full control. Start for 0.2 SOL.";
+const siteDescription = "Create your own SPL token for the cheap price of 0.2 SOL! Authority Revocation and Custom Mint Address included for Free.";
 const siteImage = "https://pink-abstract-gayal-682.mypinata.cloud/ipfs/bafybeieue5otjvplqi2exrkdaxwdmjwsa2c7obiheim4wilcj6tleq63n4";
 
-const Create: NextPage = (props) => {
+const Create: NextPage = (_props) => {
   return (
     <div>
       <Head>

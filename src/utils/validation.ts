@@ -1,6 +1,6 @@
 import { TOKEN_LIMITS } from '../config';
 
-export interface ValidationResult {
+interface ValidationResult {
   isValid: boolean;
   error?: string;
 }

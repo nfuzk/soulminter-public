@@ -60,7 +60,7 @@
   color: #94A3B8;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1050px) {
   .container {
     padding: 1rem;
   }

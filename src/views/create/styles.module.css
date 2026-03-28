@@ -132,6 +132,121 @@
   padding: 25px;
 }
 
+/* Create page FAQ */
+.createFaq {
+  margin-top: 48px;
+  padding: 40px 0 24px;
+}
+
+.createFaqTitle {
+  font-size: clamp(1.4rem, 2.5vw, 1.75rem);
+  margin-bottom: 8px;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-family: 'Orbitron', sans-serif;
+  text-align: center;
+}
+
+.createFaqSubtitle {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.95rem;
+  margin-bottom: 28px;
+}
+
+.createFaqList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.createFaqItem {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 14px;
+  border: 1px solid rgba(153, 69, 255, 0.2);
+  overflow: hidden;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.createFaqItem:hover {
+  border-color: rgba(153, 69, 255, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.createFaqHeaderRow {
+  width: 100%;
+  min-height: 56px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: rgba(15, 22, 36, 0.85);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-size: 1rem;
+  box-sizing: border-box;
+  transition: background 0.2s ease;
+}
+
+.createFaqHeaderRow:hover,
+.createFaqHeaderRow:focus-visible {
+  background: rgba(24, 32, 52, 0.9);
+  outline: none;
+}
+
+.createFaqQuestion {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.createFaqToggleIcon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(153, 69, 255, 0.5);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 22, 36, 0.95);
+  color: var(--accent-color);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.createFaqBody {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-4px);
+  background: rgba(5, 10, 24, 0.9);
+  transition: max-height 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
+}
+
+.createFaqBodyOpen {
+  max-height: 400px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.createFaqBodyInner {
+  padding: 16px 20px 20px;
+}
+
+.createFaqBodyInner p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
 /* Form Styles */
 .formGroup {
   margin-bottom: 18px;
@@ -964,10 +1079,86 @@
 }
 
 .termsText {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.6);
-  margin-bottom: 15px;
-  line-height: 1.4;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 18px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.6);
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+}
+
+.termsCheckbox {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  margin-top: 2px;
+  border-radius: 6px;
+  border: 2px solid rgba(148, 163, 184, 0.9);
+  background: rgba(15, 23, 42, 0.9);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+}
+
+.termsCheckbox:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.5);
+}
+
+.termsCheckbox:hover {
+  border-color: rgba(209, 213, 219, 1);
+  transform: translateY(-1px);
+}
+
+.termsCheckbox:checked {
+  border-color: #a855f7;
+  background: linear-gradient(135deg, #a855f7, #6366f1);
+  box-shadow: 0 0 0 3px rgba(168, 85, 247, 0.35);
+}
+
+.termsCheckbox:checked::after {
+  content: '';
+  width: 10px;
+  height: 6px;
+  border: 2px solid #fff;
+  border-top: none;
+  border-right: none;
+  transform: rotate(-45deg) translateY(1px);
+}
+
+.termsCheckbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none;
+}
+
+.termsCheckbox:disabled + span,
+.termsCheckbox:disabled ~ span {
+  opacity: 0.7;
+}
+
+.termsCopy {
+  flex: 1;
+}
+
+.termsCopy strong {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 2px;
+  color: #e5e7eb;
 }
 
 .termsLink {
@@ -982,7 +1173,7 @@
 }
 
 /* Responsive Design */
-@media (max-width: 768px) {
+@media (max-width: 1050px) {
     .createContainer {
     padding-top: 15px;
   }

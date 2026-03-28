@@ -226,7 +226,7 @@
   border-bottom-color: #14F195;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1050px) {
   .main {
     padding: 2rem 1rem;
   }

@@ -39,11 +39,4 @@ export const ERROR_MESSAGES = {
   INVALID_SUPPLY: 'Initial supply must be a positive number',
   FILE_TOO_LARGE: 'Image file size must be less than 5MB',
   INVALID_FILE_TYPE: 'Invalid file type. Please upload a JPEG, PNG, GIF, or WebP image',
-};
-
-// Analytics Events
-export const ANALYTICS_EVENTS = {
-  TOKEN_CREATED: 'token_created',
-  AFFILIATE_LINKED: 'affiliate_linked',
-  ERROR_OCCURRED: 'error_occurred',
 }; 

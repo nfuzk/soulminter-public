@@ -6,12 +6,10 @@ import {
 } from "@solana/wallet-adapter-react";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { PhantomWalletAdapter } from "@solana/wallet-adapter-wallets";
-import { clusterApiUrl } from "@solana/web3.js";
 import { FC, ReactNode, useCallback, useMemo, useEffect } from "react";
 import { AutoConnectProvider, useAutoConnect } from "./AutoConnectProvider";
 import { notify } from "../utils/notifications";
 import { getSolanaNetwork } from '../utils/getSolanaNetwork';
-import { registerMobileWalletAdapter } from '../utils/mobileWalletAdapter';
 
 const WalletStateResetter: FC = () => {
   const { connected } = useWallet();
@@ -69,9 +67,11 @@ const WalletContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
       toString: String(error),
     });
     
-    // Handle WalletAccountError - usually from auto-connect attempts with MWA
+    // Handle WalletAccountError - usually from auto-connect attempts with Mobile Wallet Adapter
     if (error.name === 'WalletAccountError' || error.message?.includes('WalletAccountError')) {
-      console.warn('WalletAccountError - likely from auto-connect attempt with MWA');
+      if (process.env.NODE_ENV === 'development') {
+        console.warn('WalletAccountError - likely from auto-connect attempt with MWA');
+      }
       // Clear stored wallet to prevent future auto-connect attempts
       if (typeof window !== 'undefined') {
         localStorage.removeItem('walletName');
@@ -97,7 +97,9 @@ const WalletContextProvider: FC<{ children: ReactNode }> = ({ children }) => {
       (error.message && error.message.toLowerCase().includes("user rejected the request")) ||
       (error.name === 'WalletConnectionError' && error.message && error.message.toLowerCase().includes('connection rejected'))
     ) {
-      console.log('User rejected connection - suppressing notification');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('User rejected connection - suppressing notification');
+      }
       return;
     }
     

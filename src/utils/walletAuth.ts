@@ -2,7 +2,7 @@ import { PublicKey } from '@solana/web3.js';
 import nacl from 'tweetnacl';
 import bs58 from 'bs58';
 
-export interface WalletAuthResult {
+interface WalletAuthResult {
   isValid: boolean;
   wallet: string;
   error?: string;
@@ -37,7 +37,7 @@ export const verifyWalletSignature = async (
     let publicKey: PublicKey;
     try {
       publicKey = new PublicKey(walletAddress);
-    } catch (error) {
+    } catch {
       return { isValid: false, wallet: walletAddress, error: 'Invalid wallet address format' };
     }
 
@@ -45,7 +45,7 @@ export const verifyWalletSignature = async (
     let signatureBytes: Uint8Array;
     try {
       signatureBytes = bs58.decode(signature);
-    } catch (error) {
+    } catch {
       return { isValid: false, wallet: walletAddress, error: 'Invalid signature format' };
     }
 
@@ -78,7 +78,7 @@ export const verifyWalletSignature = async (
  * Generates a challenge message for wallet authentication
  * This should be unique per request to prevent replay attacks
  */
-export const generateAuthMessage = (walletAddress: string, timestamp: number): string => {
+const generateAuthMessage = (walletAddress: string, timestamp: number): string => {
   return `Authenticate wallet ${walletAddress} at ${timestamp}`;
 };
 

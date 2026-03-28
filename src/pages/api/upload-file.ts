@@ -47,7 +47,7 @@ function validateFile(file: formidable.File): { isValid: boolean; error?: string
     }
 
     return { isValid: true };
-  } catch (error) {
+  } catch {
     return { isValid: false, error: 'Unable to validate file content' };
   }
 }
@@ -68,13 +68,14 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   let files: any = null;
 
   try {
-    // Check if Arweave wallet is configured
-    const walletPath = process.env.ARWEAVE_WALLET_PATH;
-    const walletBase64 = process.env.ARWEAVE_WALLET_BASE64;
-    
-    if (!walletPath && !walletBase64) {
-      console.error('Neither ARWEAVE_WALLET_PATH nor ARWEAVE_WALLET_BASE64 configured');
-      return res.status(500).json({ error: 'ArDrive service not configured' });
+    // Ensure at least one storage backend is configured
+    const hasLighthouse = Boolean(process.env.LIGHTHOUSE_API_KEY);
+    const hasPinata = Boolean(process.env.PINATA_JWT);
+    const hasArDrive = Boolean(process.env.ARWEAVE_WALLET_PATH || process.env.ARWEAVE_WALLET_BASE64);
+
+    if (!hasLighthouse && !hasPinata && !hasArDrive) {
+      console.error('No storage backend configured (LIGHTHOUSE_API_KEY, PINATA_JWT, or Arweave wallet)');
+      return res.status(500).json({ error: 'No storage service configured' });
     }
 
     // Parse the form data with size limits
@@ -83,7 +84,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       maxFields: 1,
       maxFieldsSize: 1024, // 1KB for form fields
     });
-    const [fields, parsedFiles] = await form.parse(req);
+    const [, parsedFiles] = await form.parse(req);
     files = parsedFiles;
 
     // Check if it's a file upload
@@ -134,7 +135,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           }
         }
       }
-    } catch (cleanupError) {
+    } catch {
       // Silent cleanup failure
     }
     

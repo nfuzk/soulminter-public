@@ -1,9 +1,9 @@
 import { FC, useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useConnection } from '@solana/wallet-adapter-react';
 import { useCookieConsent } from '../contexts/CookieConsentContext';
 import styles from './Footer.module.css';
 import { getSolanaNetwork } from '../utils/getSolanaNetwork';
+import { FEATURES } from '../config';
 
 const Footer: FC = () => {
   const network = getSolanaNetwork();
@@ -34,18 +34,26 @@ const Footer: FC = () => {
             Terms of Service
           </Link>
           <span className={styles.separator}>•</span>
+          <Link href={getMainSiteUrl('/about')} className={styles.link}>
+            About
+          </Link>
+          <span className={styles.separator}>•</span>
           <a href={getMainSiteUrl('/privacy')} className={styles.link} target="_blank" rel="noopener noreferrer">Privacy Policy</a>
           <span className={styles.separator}>|</span>
           <a href={getMainSiteUrl('/disclaimer')} className={styles.link} target="_blank" rel="noopener noreferrer">Disclaimer</a>
           <span className={styles.separator}>•</span>
-          <Link href={getMainSiteUrl('/affiliate-terms')} className={styles.link}>
-            Affiliate Terms
-          </Link>
-          <span className={styles.separator}>•</span>
-          <Link href={getMainSiteUrl('/affiliate-faq')} className={styles.link}>
-            Affiliate FAQ
-          </Link>
-          <span className={styles.separator}>•</span>
+          {FEATURES.ENABLE_AFFILIATE && (
+            <>
+              <Link href={getMainSiteUrl('/affiliate-terms')} className={styles.link}>
+                Affiliate Terms
+              </Link>
+              <span className={styles.separator}>•</span>
+              <Link href={getMainSiteUrl('/affiliate-faq')} className={styles.link}>
+                Affiliate FAQ
+              </Link>
+              <span className={styles.separator}>•</span>
+            </>
+          )}
           <a href="mailto:main@soulminter.io" className={styles.link}>
             main@soulminter.io
           </a>

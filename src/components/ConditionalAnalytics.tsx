@@ -6,7 +6,7 @@ const ConditionalAnalytics: React.FC = () => {
   const { hasConsent, preferences } = useCookieConsent();
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') {return;}
     
     const shouldEnableAnalytics = hasConsent && preferences.analytics;
     const currentOptOut = localStorage.getItem('vercel-analytics-opt-out');

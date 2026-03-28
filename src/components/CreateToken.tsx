@@ -23,27 +23,25 @@ import {
 } from "@solana/spl-token";
 import {
   createCreateMetadataAccountV3Instruction,
-  createUpdateMetadataAccountV2Instruction,
   PROGRAM_ID,
 } from "@metaplex-foundation/mpl-token-metadata";
-import { FC, useCallback, useState, useEffect, useRef } from "react";
+import { FC, useState, useEffect, useRef } from "react";
 import { notify } from "utils/notifications";
 import { ClipLoader } from "react-spinners";
-import { useRouter } from "next/router";
 import Image from "next/image";
 import styles from "../views/create/styles.module.css";
 import { FEE_CONFIG, UPLOAD_CONFIG, FEATURES, ERROR_MESSAGES } from '../config';
-import { validateTokenName, validateTokenSymbol, validateTokenDecimals, validateInitialSupply, validateTokenDescription, validateCustomMintPattern } from '../utils/validation';
+import { validateTokenName, validateTokenSymbol, validateTokenDecimals, validateInitialSupply, validateCustomMintPattern } from '../utils/validation';
 import { getSolanaNetwork } from '../utils/getSolanaNetwork';
+import { trackGoogleAdsPurchaseConversion, trackTokenCreationConversion } from '../utils/analytics';
+import { useCookieConsent } from '../contexts/CookieConsentContext';
 import bs58 from "bs58";
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
-const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+import { optimizeImageForUpload } from '../utils/optimizeImageForUpload';
 
 // Add loading steps enum
 const LoadingStep = {
   INITIALIZING: "Initializing...",
-  UPLOADING_IMAGE: "Uploading image to Arweave...",
+  UPLOADING_IMAGE: "Uploading image to decentralized storage...",
   CREATING_MINT: "Creating mint account...",
   TRANSFERRING_FEE: "Transferring fee...",
   TRANSFERRING_COMMISSION: "Transferring affiliate commission...",
@@ -89,12 +87,13 @@ async function sendWithFallback(secureRPC: any, rawTxBase64: string) {
     const msg: string = err?.message || '';
     if (
       msg.includes('simulation failed') ||
+      msg.includes('AccountNotFound') ||
       msg.includes('already been processed') ||
       msg.includes('Transaction was previously processed') ||
       msg.includes('Blockhash not found') ||
       msg.includes('Transaction expired')
     ) {
-      console.warn('sendWithFallback: simulation failed, retrying without preflight');
+      console.warn('sendWithFallback: simulation failed or AccountNotFound, retrying without preflight');
       // retry once without simulation with more retries
       return await secureRPC.sendTransaction(rawTxBase64, {
         encoding: 'base64',
@@ -107,12 +106,72 @@ async function sendWithFallback(secureRPC: any, rawTxBase64: string) {
   }
 }
 
+// Helper to parse simulation errors into user-friendly messages
+function parseSimulationError(err: any): string {
+  if (!err) {
+    return 'Transaction simulation failed for an unknown reason.';
+  }
+
+  // Handle string errors
+  if (typeof err === 'string') {
+    if (err.toLowerCase().includes('insufficient')) {
+      return 'Insufficient SOL balance. Please ensure you have enough SOL to cover the transaction fee and account creation costs.';
+    }
+    return `Transaction simulation failed: ${err}`;
+  }
+
+  // Handle object errors
+  if (typeof err === 'object') {
+    // InsufficientFundsForFee
+    if ('InsufficientFundsForFee' in err) {
+      return 'Insufficient SOL balance to pay for transaction fees. Please add more SOL to your wallet.';
+    }
+
+    // InsufficientFundsForRent
+    if ('InsufficientFundsForRent' in err) {
+      return 'Insufficient SOL balance to create the account. Please add more SOL to your wallet.';
+    }
+
+    // AccountNotFound
+    if ('AccountNotFound' in err) {
+      return 'Required account not found. Please try again.';
+    }
+
+    // InstructionError - format: { "InstructionError": [instructionIndex, error] }
+    if ('InstructionError' in err) {
+      const instructionError = err.InstructionError;
+      if (Array.isArray(instructionError) && instructionError.length >= 2) {
+        const [instructionIndex, error] = instructionError;
+        
+        // Custom program error
+        if (error === 'Custom' && instructionError.length >= 3) {
+          const errorCode = instructionError[2];
+          return `Transaction failed at instruction ${instructionIndex}: Program error ${errorCode}. This may indicate insufficient funds or invalid parameters.`;
+        }
+        
+        // Generic instruction error
+        return `Transaction failed at instruction ${instructionIndex}: ${JSON.stringify(error)}`;
+      }
+    }
+
+    // Try to find any error message in the object
+    const errorKeys = Object.keys(err);
+    if (errorKeys.length > 0) {
+      const firstError = errorKeys[0];
+      return `Transaction simulation failed: ${firstError}. Please check your wallet balance and try again.`;
+    }
+  }
+
+  // Fallback
+  return `Transaction simulation failed: ${JSON.stringify(err)}. Please ensure you have sufficient SOL balance.`;
+}
+
 export const CreateToken: FC = () => {
   const { connection } = useConnection();
   const { publicKey, signTransaction } = useWallet();
   const { makeAuthenticatedRequest } = useSimpleWalletAuth();
   const secureRPC = useSecureRPC();
-  const router = useRouter();
+  const { hasConsent, preferences } = useCookieConsent();
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [tokenName, setTokenName] = useState("");
   const [tokenSymbol, setTokenSymbol] = useState("");
@@ -125,8 +184,9 @@ export const CreateToken: FC = () => {
   const [revokeMintAuthority, setRevokeMintAuthority] = useState(false);
   const [revokeFreezeAuthority, setRevokeFreezeAuthority] = useState(false);
   const [makeMetadataImmutable, setMakeMetadataImmutable] = useState(false);
-  const [isSocialLinksExpanded, setIsSocialLinksExpanded] = useState(false);
   const [tokenMintAddress, setTokenMintAddress] = useState("");
+  const [lastSuccessfulSignature, setLastSuccessfulSignature] = useState("");
+  const [lastHadAffiliateCommission, setLastHadAffiliateCommission] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(LoadingStep.INITIALIZING);
@@ -137,6 +197,8 @@ export const CreateToken: FC = () => {
   const [foundMintKeypair, setFoundMintKeypair] = useState<Keypair | null>(null);
   const loadingModalRef = useRef<HTMLDivElement>(null);
   const transactionLockRef = useRef<boolean>(false);
+  const trackedConversionMintRef = useRef<string | null>(null);
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(false);
 
   // Add new state for toggling optional blocks
   const [isSocialLinksEnabled, setIsSocialLinksEnabled] = useState(false);
@@ -151,7 +213,35 @@ export const CreateToken: FC = () => {
     }
   }, [isLoading]);
 
-  const FEE_RECEIVER = new PublicKey("8347h8LeaVAUzyWES3Xj2Gd6QTpGrCayKBpuYvBW3PWD");
+  // Fire conversion tracking after success UI state is reached (mint address visible)
+  useEffect(() => {
+    if (!tokenMintAddress || !lastSuccessfulSignature) {
+      return;
+    }
+
+    if (trackedConversionMintRef.current === tokenMintAddress) {
+      return;
+    }
+
+    trackedConversionMintRef.current = tokenMintAddress;
+
+    trackTokenCreationConversion(
+      lastSuccessfulSignature,
+      lastHadAffiliateCommission,
+      hasConsent,
+      preferences.analytics
+    ).catch((error) => {
+      console.error('Failed to track GA conversion:', error);
+    });
+
+    trackGoogleAdsPurchaseConversion(
+      tokenMintAddress,
+      hasConsent,
+      preferences.analytics
+    ).catch((error) => {
+      console.error('Failed to track Google Ads conversion:', error);
+    });
+  }, [tokenMintAddress, lastSuccessfulSignature, lastHadAffiliateCommission, hasConsent, preferences.analytics]);
 
 
   const updateProgress = (step: string) => {
@@ -162,11 +252,11 @@ export const CreateToken: FC = () => {
     setCurrentStep(step);
   };
 
-  const handleImageChange = (event) => {
-    if (!publicKey) return;
+  const handleImageChange = async (event) => {
+    if (!publicKey) {return;}
     
     const file = event.target.files[0];
-    if (!file) return;
+    if (!file) {return;}
 
     if (file.size > UPLOAD_CONFIG.MAX_FILE_SIZE) {
       notify({ 
@@ -184,12 +274,29 @@ export const CreateToken: FC = () => {
       return;
     }
 
-    setImageFile(file);
+    try {
+      const optimizedFile = await optimizeImageForUpload(file, 1024);
+      setImageFile(optimizedFile);
+    } catch (err) {
+      console.error('Image optimization failed:', err);
+      notify({
+        type: 'error',
+        message: 'Image could not be processed. Please try another file.',
+      });
+    }
   };
 
   const handleCreateToken = async () => {
     if (!publicKey) {
       notify({ type: 'error', message: ERROR_MESSAGES.WALLET_NOT_CONNECTED });
+      return;
+    }
+
+    if (!hasAcceptedTerms) {
+      notify({
+        type: 'error',
+        message: 'Please confirm that you accept the Terms of Service, Privacy Policy, and Disclaimer before creating a token.',
+      });
       return;
     }
 
@@ -202,12 +309,6 @@ export const CreateToken: FC = () => {
     // Set submitting state and lock immediately to prevent race conditions
     setIsSubmitting(true);
     transactionLockRef.current = true;
-
-    // Scroll to top immediately when user clicks create button
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
 
     try {
       // Validate inputs first
@@ -308,8 +409,12 @@ export const CreateToken: FC = () => {
         
         // Show success notification when mint address is found
         const foundAddress = bs58.encode(foundCandidate!.publicKey.toBytes());
-        console.log('Custom mint address found:', foundAddress);
-        console.log('Pattern was:', pattern, 'Type:', isPrefix ? 'prefix' : 'suffix');
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Custom mint address found:', foundAddress);
+          console.log('Pattern was:', pattern, 'Type:', isPrefix ? 'prefix' : 'suffix');
+        }
+        
         notify({ 
           type: "success", 
           message: `Custom mint address found! ${foundAddress.slice(0, 8)}...${foundAddress.slice(-8)}` 
@@ -318,7 +423,7 @@ export const CreateToken: FC = () => {
         // Start token creation with the found custom mint keypair
         await startTokenCreation(foundCandidate);
         
-      } catch (error) {
+      } catch {
         notify({ type: "error", message: "Error generating custom mint address. Please try again." });
         setIsSubmitting(false);
         return;
@@ -332,7 +437,10 @@ export const CreateToken: FC = () => {
   const startTokenCreation = async (customMintKeypair?: Keypair, retryCount = 0) => {
     setIsLoading(true);
     updateProgress(LoadingStep.INITIALIZING);
-    
+
+    // Scroll to show loading animation (after custom mint is found, or immediately if no custom mint)
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
     // Focus the loading modal to ensure it's visible
     setTimeout(() => {
       if (loadingModalRef.current) {
@@ -345,17 +453,23 @@ export const CreateToken: FC = () => {
       let mintKeypair = null;
       if (customMintKeypair) {
         mintKeypair = customMintKeypair;
-        console.log('Using custom mint keypair:', bs58.encode(customMintKeypair.publicKey.toBytes()));
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Using custom mint keypair:', bs58.encode(customMintKeypair.publicKey.toBytes()));
+        }
       } else if (foundMintKeypair) {
         mintKeypair = foundMintKeypair;
-        console.log('Using found mint keypair:', bs58.encode(foundMintKeypair.publicKey.toBytes()));
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Using found mint keypair:', bs58.encode(foundMintKeypair.publicKey.toBytes()));
+        }
         setFoundMintKeypair(null); // Clean up
       } else {
         mintKeypair = Keypair.generate();
-        console.log('Using generated mint keypair:', bs58.encode(mintKeypair.publicKey.toBytes()));
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Using generated mint keypair:', bs58.encode(mintKeypair.publicKey.toBytes()));
+        }
       }
 
-      // Upload metadata to Arweave via server-side API
+      // Upload metadata to decentralized storage via server-side API (Lighthouse primary with Pinata/Arweave fallbacks)
       let tokenUri = "";
       try {
         let imageUri = "https://pink-abstract-gayal-682.mypinata.cloud/ipfs/bafybeigjzuiviadtrfyvvo7o6ewccb46b3kgav2yi54fuf4vjxkb53da7i";
@@ -388,7 +502,7 @@ export const CreateToken: FC = () => {
           image: imageUri,
           attributes: [],
           properties: {
-            files: [{ uri: imageUri, type: "image/png" }],
+            files: [{ uri: imageUri, type: imageFile?.type || "image/png" }],
             category: "image",
             creators: []
           },
@@ -502,7 +616,7 @@ export const CreateToken: FC = () => {
           } else {
             // Silent failure for affiliate check
           }
-        } catch (error) {
+        } catch {
           // Continue with token creation even if affiliate check fails
         }
       }
@@ -590,7 +704,7 @@ export const CreateToken: FC = () => {
             mint: mintKeypair.publicKey,
             mintAuthority: publicKey,
             payer: publicKey,
-            updateAuthority: updateAuthority,
+            updateAuthority,
           },
           {
             createMetadataAccountArgsV3: {
@@ -676,12 +790,16 @@ export const CreateToken: FC = () => {
         tx.recentBlockhash = blockhash;
         tx.lastValidBlockHeight = lastValidBlockHeight;
 
-        // Log transaction size before signing (for debugging)
+        // Calculate transaction size before signing
         const txSizeBeforeSigning = tx.serialize({ requireAllSignatures: false, verifySignatures: false }).length;
         const txSizeLimit = 1232; // Solana's transaction size limit in bytes
         const txSizePercent = (txSizeBeforeSigning / txSizeLimit) * 100;
-        console.log(`Transaction size: ${txSizeBeforeSigning} bytes (${txSizePercent.toFixed(2)}% of ${txSizeLimit} byte limit)`);
-        console.log(`Transaction instructions: ${tx.instructions.length}`);
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`Transaction size: ${txSizeBeforeSigning} bytes (${txSizePercent.toFixed(2)}% of ${txSizeLimit} byte limit)`);
+          console.log(`Transaction instructions: ${tx.instructions.length}`);
+        }
+        
         if (txSizePercent > 80) {
           console.warn(`⚠️ Transaction size is ${txSizePercent.toFixed(2)}% of limit - approaching Solana's size limit!`);
         }
@@ -690,12 +808,42 @@ export const CreateToken: FC = () => {
         try {
           const simulationResult = await secureRPC.simulateTransaction(tx);
           if (simulationResult.value?.err) {
-            throw new Error(`Transaction simulation failed: ${JSON.stringify(simulationResult.value.err)}`);
+            const err = simulationResult.value.err;
+            const friendlyError = parseSimulationError(err);
+            // AccountNotFound is often an RPC/cluster quirk (e.g. devnet or metadata program);
+            // allow sending anyway so sendWithFallback can retry with skipPreflight if needed
+            const isAccountNotFound =
+              (typeof err === 'object' && err !== null && 'AccountNotFound' in err) ||
+              friendlyError.includes('Required account not found') ||
+              friendlyError.includes('AccountNotFound');
+            if (isAccountNotFound) {
+              console.warn('Transaction simulation reported AccountNotFound; proceeding to send (may succeed with skipPreflight)', friendlyError);
+            } else {
+              throw new Error(friendlyError);
+            }
+          } else if (process.env.NODE_ENV === 'development') {
+            console.log('Transaction simulation successful');
           }
-          console.log('Transaction simulation successful');
         } catch (simError: any) {
           console.error('Transaction simulation error:', simError);
-          throw new Error(`Transaction simulation failed: ${simError.message}`);
+          const msg = simError?.message ?? '';
+          const isAccountNotFound =
+            msg.includes('AccountNotFound') || msg.includes('Required account not found');
+          if (isAccountNotFound) {
+            console.warn('Transaction simulation failed with AccountNotFound; proceeding to send (may succeed with skipPreflight)', msg);
+          } else {
+            if (msg && !msg.includes('Transaction simulation failed:')) {
+              throw new Error(parseSimulationError(simError));
+            }
+            if (
+              msg.includes('Insufficient SOL balance') ||
+              msg.includes('Required account not found') ||
+              msg.includes('Transaction failed at instruction')
+            ) {
+              throw simError;
+            }
+            throw new Error(parseSimulationError(msg || simError));
+          }
         }
 
         // Sign with Phantom wallet FIRST (as per Phantom's best practices)
@@ -708,12 +856,15 @@ export const CreateToken: FC = () => {
         // THEN add mintKeypair signature
         signedTx.partialSign(mintKeypair);
 
-        // Log final transaction size after signing
+        // Calculate final transaction size after signing
         const signedTxBuffer = signedTx.serialize();
         const rawTx = signedTxBuffer.toString('base64');
         const finalTxSize = signedTxBuffer.length;
         const finalTxSizePercent = (finalTxSize / txSizeLimit) * 100;
-        console.log(`Final transaction size: ${finalTxSize} bytes (${finalTxSizePercent.toFixed(2)}% of ${txSizeLimit} byte limit)`);
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`Final transaction size: ${finalTxSize} bytes (${finalTxSizePercent.toFixed(2)}% of ${txSizeLimit} byte limit)`);
+        }
 
       // Send via secure RPC to Helius avoiding wallet adapter sendTransaction issues
       // Add timeout to prevent hanging transactions - increased for mainnet
@@ -748,7 +899,7 @@ export const CreateToken: FC = () => {
           
           if (status) {
             if (status.err) {
-              throw new Error('Transaction failed: ' + JSON.stringify(status.err));
+              throw new Error(`Transaction failed: ${  JSON.stringify(status.err)}`);
             }
             // Accept both 'finalized' and 'confirmed' for better reliability
             if (status.confirmationStatus === 'finalized' || status.confirmationStatus === 'confirmed') {
@@ -779,8 +930,9 @@ export const CreateToken: FC = () => {
         await new Promise(res => setTimeout(res, baseDelay + jitter));
       }
       
-      // Log final status for debugging
-      console.log(`Confirmation loop ended. Status checks: ${statusCheckCount}/${maxStatusChecks}, Consecutive errors: ${consecutiveErrors}/${maxConsecutiveErrors}`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Confirmation loop ended. Status checks: ${statusCheckCount}/${maxStatusChecks}, Consecutive errors: ${consecutiveErrors}/${maxConsecutiveErrors}`);
+      }
       
       if (!status || (status.confirmationStatus !== 'finalized' && status.confirmationStatus !== 'confirmed')) {
         // Only do final check if we haven't hit too many consecutive errors
@@ -794,7 +946,7 @@ export const CreateToken: FC = () => {
             } else {
               throw new Error(`Transaction confirmation timed out after ${confirmationTimeout/1000} seconds. Last error: ${lastError?.message || 'Unknown'}`);
             }
-          } catch (finalError) {
+          } catch {
             throw new Error(`Transaction confirmation timed out after ${confirmationTimeout/1000} seconds. Last error: ${lastError?.message || 'Unknown'}`);
           }
         } else {
@@ -819,13 +971,15 @@ export const CreateToken: FC = () => {
           if (!earningsResponse.ok) {
             // Silent failure for affiliate earnings update
           }
-        } catch (error) {
+        } catch {
           // Don't fail the token creation if affiliate earnings update fails
         }
       }
 
       updateProgress(LoadingStep.COMPLETE);
       setTokenMintAddress(mintKeypair.publicKey.toString());
+      setLastSuccessfulSignature(signature);
+      setLastHadAffiliateCommission(affiliateAmount > 0);
       notify({
         type: "success",
         message: "Token created successfully!",
@@ -852,14 +1006,17 @@ export const CreateToken: FC = () => {
             // Transaction was actually successful, treat as success
             updateProgress(LoadingStep.COMPLETE);
             setTokenMintAddress(mintKeypair.publicKey.toString());
+            setLastSuccessfulSignature(signature);
+            setLastHadAffiliateCommission(affiliateAmount > 0);
             notify({
               type: "success",
               message: "Token created successfully!",
               txid: signature
             });
+            
             return; // Exit early since transaction was successful
           }
-        } catch (lookupError) {
+        } catch {
           // If we can't verify the status, fall through to the error
         }
         throw new Error("Transaction was already processed. Please check your wallet for the new token.");
@@ -873,7 +1030,9 @@ export const CreateToken: FC = () => {
   } catch (error: any) {
     // Check if this is a timeout error and we haven't exceeded retry limit
     if (error.message?.includes('confirmation timed out') && retryCount < 2) {
-      console.log(`Transaction timeout, retrying... (attempt ${retryCount + 1}/2)`);
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`Transaction timeout, retrying... (attempt ${retryCount + 1}/2)`);
+      }
       setIsLoading(false);
       setIsSubmitting(false);
       transactionLockRef.current = false;
@@ -1216,9 +1375,6 @@ export const CreateToken: FC = () => {
                         }}
                       />
                     </div>
-                    <div className={styles.mintProgressTip}>
-                      💡 Tip: Shorter patterns (1-2 characters) are found much faster
-                    </div>
                   </div>
                       )}
 
@@ -1228,20 +1384,35 @@ export const CreateToken: FC = () => {
 
           {/* Create Button */}
           <div className={styles.createSection}>
-            <div className={styles.termsText}>
-              By clicking create, you agree to our{' '}
-              <a href="/terms" className={styles.termsLink} target="_blank" rel="noopener noreferrer">
-                Terms of Service
-              </a>
-              {' '}and{' '}
-              <a href="/privacy" className={styles.termsLink} target="_blank" rel="noopener noreferrer">
-                Privacy Policy
-              </a>
-            </div>
+            <label className={styles.termsText}>
+              <input
+                type="checkbox"
+                className={styles.termsCheckbox}
+                checked={hasAcceptedTerms}
+                onChange={(e) => setHasAcceptedTerms(e.target.checked)}
+                disabled={!publicKey || isLoading || isSubmitting}
+              />
+              <span className={styles.termsCopy}>
+                <strong>I understand and accept the following legal documents before creating a token:</strong>
+                {' '}
+                <a href="/terms" className={styles.termsLink} target="_blank" rel="noopener noreferrer">
+                  Terms of Service
+                </a>
+                {', '}
+                <a href="/privacy" className={styles.termsLink} target="_blank" rel="noopener noreferrer">
+                  Privacy Policy
+                </a>
+                {' and '}
+                <a href="/disclaimer" className={styles.termsLink} target="_blank" rel="noopener noreferrer">
+                  Disclaimer
+                </a>
+                .
+              </span>
+            </label>
             <button
               className={`${styles.btn} ${styles.btnPrimary}`}
               onClick={handleCreateToken}
-              disabled={!publicKey || isLoading || isSubmitting}
+              disabled={!publicKey || isLoading || isSubmitting || !hasAcceptedTerms}
             >
               {!publicKey ? "Connect Wallet to Create Token" : isLoading ? "Creating..." : "Create Token (0.2 SOL fee)"}
             </button>

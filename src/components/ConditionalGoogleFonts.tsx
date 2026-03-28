@@ -5,7 +5,7 @@ const ConditionalGoogleFonts: React.FC = () => {
   const { hasConsent, preferences } = useCookieConsent();
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') {return;}
     
     const shouldEnableFonts = hasConsent && preferences.optionalServices;
     const existingLink = document.getElementById('google-fonts-stylesheet');

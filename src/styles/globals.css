@@ -300,7 +300,7 @@ html, body {
 }
 
 /* Responsive design - Enhanced for mobile readability */
-@media (max-width: 768px) {
+@media (max-width: 1050px) {
     .blog-content {
         font-size: 1rem;
         line-height: 1.7;

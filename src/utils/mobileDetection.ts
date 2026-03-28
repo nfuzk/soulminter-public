@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 
 export const isMobileDevice = (): boolean => {
   if (typeof window === 'undefined') {
@@ -13,21 +12,4 @@ export const isMobileDevice = (): boolean => {
   const isMobileScreen = window.innerWidth < 768; // Tailwind's md breakpoint
 
   return isMobileUserAgent || isMobileScreen;
-};
-
-export const useMobileDetection = (): boolean => {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(isMobileDevice());
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  return isMobile;
 };

@@ -61,7 +61,9 @@ export const requireWalletOwnership = (walletParam: string = 'wallet') => {
 
       // Ensure user can only access their own wallet data
       if (requestedWallet !== authenticatedWallet) {
-        console.warn(`Unauthorized access attempt: ${authenticatedWallet} tried to access ${requestedWallet}`);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`Unauthorized access attempt: ${authenticatedWallet} tried to access ${requestedWallet}`);
+        }
         return res.status(403).json({ 
           error: 'Forbidden',
           code: 'WALLET_OWNERSHIP_REQUIRED',

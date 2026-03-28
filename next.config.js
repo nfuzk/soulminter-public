@@ -8,6 +8,11 @@ const nextConfig = {
   productionBrowserSourceMaps: true,
   compress: true,
   poweredByHeader: false,
+  experimental: {
+    // Exclude ua-parser-js from edge runtime bundles
+    // It's only needed by Trezor wallet adapter which isn't used
+    serverComponentsExternalPackages: ['ua-parser-js'],
+  },
   images: {
     remotePatterns: [
       {
@@ -45,7 +50,7 @@ const nextConfig = {
     minimumCacheTTL: 60,
   },
   // Prevent Next.js dev server from reloading when Prisma SQLite DB changes
-  webpack: (config, { dev, isServer }) => {
+  webpack: (config, { dev, isServer, isEdgeRuntime }) => {
     if (dev && !isServer) {
       config.watchOptions = {
         ...config.watchOptions,
@@ -55,6 +60,34 @@ const nextConfig = {
         ],
       };
     }
+    
+    // Exclude ua-parser-js from edge runtime (middleware) bundle
+    // It's only needed by Trezor wallet adapter which isn't used in middleware
+    if (isEdgeRuntime) {
+      // Use IgnorePlugin to completely exclude ua-parser-js from edge runtime
+      const webpack = require('webpack');
+      config.plugins = config.plugins || [];
+      config.plugins.push(
+        new webpack.IgnorePlugin({
+          resourceRegExp: /^ua-parser-js$/,
+        })
+      );
+      
+      // Also use externals as fallback
+      config.externals = config.externals || [];
+      if (Array.isArray(config.externals)) {
+        config.externals.push('ua-parser-js');
+      } else {
+        config.externals = [config.externals, 'ua-parser-js'];
+      }
+      
+      // And alias as additional fallback
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'ua-parser-js': false,
+      };
+    }
+    
     return config;
   },
   async redirects() {
@@ -116,7 +149,7 @@ const nextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://va.vercel-scripts.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://* blob:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' ws://localhost:* ws://127.0.0.1:* https://mainnet.helius-rpc.com https://devnet.helius-rpc.com https://testnet.helius-rpc.com https://explorer-api.devnet.solana.com https://explorer-api.mainnet-beta.solana.com https://explorer-api.testnet.solana.com https://ipfs.io https://nft.storage https://*.pinata.cloud https://api.solflare.com https://solflare.com https://connect.solflare.com https://phantom.app https://api.phantom.app https://*.vercel-analytics.com https://vitals.vercel-insights.com https://*.vercel-insights.com https://*.vercel-scripts.com https://www.google-analytics.com https://analytics.google.com; frame-src 'self' https://connect.solflare.com https://solflare.com https://phantom.app; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;"
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://va.vercel-scripts.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https://* blob:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' ws://localhost:* ws://127.0.0.1:* https://mainnet.helius-rpc.com https://devnet.helius-rpc.com https://testnet.helius-rpc.com https://explorer-api.devnet.solana.com https://explorer-api.mainnet-beta.solana.com https://explorer-api.testnet.solana.com https://ipfs.io https://nft.storage https://*.pinata.cloud https://api.solflare.com https://solflare.com https://connect.solflare.com https://phantom.app https://api.phantom.app https://*.vercel-analytics.com https://vitals.vercel-insights.com https://*.vercel-insights.com https://*.vercel-scripts.com https://www.google-analytics.com https://region1.google-analytics.com https://analytics.google.com https://pagead2.googlesyndication.com https://api.coingecko.com; frame-src 'self' https://connect.solflare.com https://solflare.com https://phantom.app; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;"
           },
           {
             key: 'X-Frame-Options',

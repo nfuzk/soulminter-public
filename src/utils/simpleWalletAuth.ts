@@ -35,27 +35,3 @@ export const useSimpleWalletAuth = () => {
   };
 };
 
-/**
- * Utility function to create authenticated API requests outside of React components
- */
-export const createSimpleAuthenticatedRequest = async (
-  walletAddress: string,
-  url: string,
-  options: RequestInit = {}
-): Promise<Response> => {
-  if (!walletAddress) {
-    throw new Error('Wallet address is required');
-  }
-
-  const headers = {
-    'Content-Type': 'application/json',
-    'x-wallet-address': walletAddress,
-    ...options.headers,
-  };
-
-  return fetch(url, {
-    ...options,
-    headers,
-  });
-};
-

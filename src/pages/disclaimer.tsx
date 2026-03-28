@@ -78,10 +78,10 @@ const Disclaimer: NextPage = () => {
       <main className={styles.main}>
         <h1 className={styles.title}>Disclaimer</h1>
         <div className={styles.content}>
-          <div className={styles.lastUpdated}>Last Updated: November 22, 2025</div>
+          <div className={styles.lastUpdated}>Last Updated: 13.03.2026</div>
           <section>
             <h2>1. General Information</h2>
-            <p>The information provided on the SoulMinter.io website (the &quot;Platform&quot;) is for general informational purposes only. All information on the Platform is provided in good faith, however, we make no representation or warranty of any kind, express or implied, regarding the accuracy, adequacy, validity, reliability, availability, or completeness of any information on the Platform. UNDER NO CIRCUMSTANCES SHALL WE HAVE ANY LIABILITY TO YOU FOR ANY LOSS OR DAMAGE OF ANY KIND INCURRED AS A RESULT OF THE USE OF THE PLATFORM OR RELIANCE ON ANY INFORMATION PROVIDED ON THE PLATFORM. YOUR USE OF THE PLATFORM AND YOUR RELIANCE ON ANY INFORMATION ON THE PLATFORM IS SOLELY AT YOUR OWN RISK.</p>
+            <p>The information provided on the SoulMinter.io website (the &quot;Platform&quot;) is for general informational purposes only. The Platform is operated by ROTH MATE EV, (&quot;SoulMinter&quot;, &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;). All information on the Platform is provided in good faith, however, we make no representation or warranty of any kind, express or implied, regarding the accuracy, adequacy, validity, reliability, availability, or completeness of any information on the Platform. UNDER NO CIRCUMSTANCES SHALL WE HAVE ANY LIABILITY TO YOU FOR ANY LOSS OR DAMAGE OF ANY KIND INCURRED AS A RESULT OF THE USE OF THE PLATFORM OR RELIANCE ON ANY INFORMATION PROVIDED ON THE PLATFORM. YOUR USE OF THE PLATFORM AND YOUR RELIANCE ON ANY INFORMATION ON THE PLATFORM IS SOLELY AT YOUR OWN RISK.</p>
           </section>
           <section>
             <h2>2. Not Financial, Investment, or Legal Advice</h2>
@@ -92,14 +92,15 @@ const Disclaimer: NextPage = () => {
             <h2>3. Risks Associated with Crypto-Assets</h2>
             <p>THE USE OF CRYPTO-ASSETS AND INTERACTION WITH BLOCKCHAIN TECHNOLOGIES INVOLVES SIGNIFICANT RISKS. YOU ACKNOWLEDGE AND AGREE THAT YOU ARE SOLELY RESPONSIBLE FOR ASSESSING AND BEARING THE RISKS ASSOCIATED WITH THE USE OF THE PLATFORM AND THE CREATION, MANAGEMENT, HOLDING, AND TRADING OF CRYPTO-ASSETS. THESE RISKS INCLUDE, BUT ARE NOT LIMITED TO:</p>
             <ul>
-              <li><b>Irreversible Technical Actions:</b> The Platform allows you to perform critical management functions, such as revoking Mint Authority or Freeze Authority. <b>These actions are irreversible on the Solana blockchain.</b> Once an authority is revoked, it cannot be restored by you, SoulMinter, or anyone else. You are solely responsible for understanding the consequences of these actions before executing them.</li>
+              <li><b>Irreversible Technical Actions:</b> The Platform allows you to perform critical management functions, such as revoking Mint Authority or Freeze Authority. These actions are irreversible on the Solana blockchain. Once an authority is revoked, it cannot be restored by you, SoulMinter, or anyone else. You are solely responsible for understanding the consequences of these actions before executing them.</li>
               <li><b>Market Volatility:</b> The prices of crypto-assets are extremely volatile and can fluctuate significantly and rapidly. You may lose all or a substantial portion of your investment.</li>
               <li><b>Regulatory Risk:</b> The regulatory landscape for crypto-assets is uncertain, evolving, and varies significantly across jurisdictions. New regulations or changes to existing ones may negatively impact the legality, usability, or value of crypto-assets and services. You are solely responsible for understanding and complying with all applicable laws and regulations in your jurisdiction.</li>
               <li><b>Technological Risks:</b> Risks associated with the underlying blockchain technology (e.g., Solana), smart contracts, software bugs, network congestion, security vulnerabilities, and potential exploits. These risks could lead to loss of funds or disruption of services.</li>
               <li><b>Security Risks:</b> Risks of cyberattacks, hacking, phishing, malware, or other security breaches that could compromise your wallet, private keys, or other digital assets. SoulMinter does not store your private keys or have access to your wallet.</li>
               <li><b>Liquidity Risk:</b> Some crypto-assets may have limited liquidity, making it difficult to buy or sell them at a desired price or at all.</li>
               <li><b>Loss of Access:</b> Loss of private keys or seed phrases will result in permanent loss of access to your crypto-assets.</li>
-              <li><b>Counterparty Risk:</b> Risks associated with third-party service providers (e.g., wallet providers, Arweave services) that are beyond SoulMinter&apos;s control.</li>
+              <li><b>Metadata Risk:</b> Risks of metadata loss, corruption, or inaccessibility due to service failures, network outages, or discontinued support by the decentralized storage networks we route to (Lighthouse, Pinata, Arweave).</li>
+              <li><b>Counterparty Risk:</b> Risks associated with third-party service providers (e.g., wallet providers, decentralized storage networks) that are beyond SoulMinter&apos;s control.</li>
             </ul>
           </section>
           <section>

@@ -1,12 +1,5 @@
 import { NextApiResponse } from 'next';
 
-export interface ApiError {
-  code: string;
-  message: string;
-  statusCode: number;
-  details?: any;
-}
-
 export class AppError extends Error {
   public readonly code: string;
   public readonly statusCode: number;
@@ -119,19 +112,5 @@ export const handleApiError = (error: unknown, res: NextApiResponse): void => {
 export const validateWalletAddress = (wallet: string): boolean => {
   const SOLANA_WALLET_REGEX = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
   return typeof wallet === 'string' && SOLANA_WALLET_REGEX.test(wallet);
-};
-
-export const validateAmount = (amount: any): boolean => {
-  return typeof amount === 'number' && isFinite(amount) && amount > 0 && amount <= 1000;
-};
-
-export const sanitizeError = (error: any): string => {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  if (typeof error === 'string') {
-    return error;
-  }
-  return 'An unknown error occurred';
 };
 

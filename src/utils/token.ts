@@ -1,10 +1,7 @@
-import { Connection, Keypair, PublicKey, Transaction, TransactionInstruction, SystemProgram } from '@solana/web3.js';
+import { Connection, PublicKey, TransactionInstruction } from '@solana/web3.js';
 import { 
-  createMint, 
   getMint, 
   TOKEN_PROGRAM_ID,
-  createAssociatedTokenAccount,
-  mintTo,
   getAssociatedTokenAddress,
   createSetAuthorityInstruction,
   AuthorityType,
@@ -14,106 +11,9 @@ import {
   MintLayout,
 } from '@solana/spl-token';
 import {
-  createCreateMetadataAccountV3Instruction,
   createUpdateMetadataAccountV2Instruction,
   PROGRAM_ID as TOKEN_METADATA_PROGRAM_ID,
-  Metadata,
 } from '@metaplex-foundation/mpl-token-metadata';
-
-export interface TokenCreationParams {
-  name: string;
-  symbol: string;
-  decimals: number;
-  initialSupply: number;
-  description?: string;
-  imageUrl?: string;
-  tokenUri?: string;
-}
-
-export async function createToken(
-  connection: Connection,
-  payer: Keypair,
-  params: TokenCreationParams
-) {
-  const mint = await createMint(
-    connection,
-    payer,
-    payer.publicKey,
-    payer.publicKey,
-    params.decimals,
-    undefined,
-    undefined,
-    TOKEN_PROGRAM_ID
-  );
-
-  // Create metadata
-  const [metadataAddress] = await PublicKey.findProgramAddress(
-    [
-      Buffer.from('metadata'),
-      TOKEN_METADATA_PROGRAM_ID.toBuffer(),
-      mint.toBuffer(),
-    ],
-    TOKEN_METADATA_PROGRAM_ID
-  );
-
-  const createMetadataInstruction = createCreateMetadataAccountV3Instruction(
-    {
-      metadata: metadataAddress,
-      mint: mint,
-      mintAuthority: payer.publicKey,
-      payer: payer.publicKey,
-      updateAuthority: payer.publicKey,
-    },
-    {
-      createMetadataAccountArgsV3: {
-        data: {
-          name: params.name,
-          symbol: params.symbol,
-          uri: params.tokenUri || "",
-          sellerFeeBasisPoints: 0,
-          creators: null,
-          collection: null,
-          uses: null,
-        },
-        isMutable: true,
-        collectionDetails: null,
-      },
-    }
-  );
-
-  const transaction = new Transaction().add(createMetadataInstruction);
-  await connection.sendTransaction(transaction, [payer]);
-
-  if (params.initialSupply > 0) {
-    const associatedTokenAccount = await createAssociatedTokenAccount(
-      connection,
-      payer,
-      mint,
-      payer.publicKey
-    );
-
-    await mintTo(
-      connection,
-      payer,
-      mint,
-      associatedTokenAccount,
-      payer,
-      params.initialSupply
-    );
-  }
-
-  return { mint };
-}
-
-export async function getTokenInfo(connection: Connection, mintAddress: PublicKey) {
-  try {
-    const mintInfo = await getMint(connection, mintAddress);
-    return mintInfo;
-  } catch (error) {
-    console.error('Error getting token info:', error);
-    throw error;
-  }
-}
 
 /**
  * Get mint and freeze authorities from a token mint account
@@ -169,7 +69,7 @@ export async function getTokenAuthoritiesSecure(
     
     // Extract data from account value
     // accountValue should be: { data: [...], executable: false, lamports: ..., owner: "..." }
-    const data = accountValue.data;
+    const {data} = accountValue;
     
     if (!data) {
       throw new Error(`Account data is missing. Full response: ${JSON.stringify(accountInfo, null, 2)}`);
@@ -324,7 +224,7 @@ export function parseMetadataAccount(metadataAccountInfo: any): { updateAuthorit
 
   try {
     let buffer: Buffer;
-    const data = metadataAccountInfo.data;
+    const {data} = metadataAccountInfo;
     
     // Handle different data formats from RPC
     if (Array.isArray(data)) {
@@ -461,59 +361,6 @@ export function createRevokeFreezeAuthorityInstruction(
 }
 
 /**
- * Create a transaction instruction to make metadata immutable
- * Note: This requires fetching the existing metadata first
- */
-export async function createMakeMetadataImmutableInstruction(
-  connection: Connection,
-  mintAddress: PublicKey,
-  updateAuthority: PublicKey
-): Promise<TransactionInstruction> {
-  const [metadataAddress] = await PublicKey.findProgramAddress(
-    [
-      Buffer.from('metadata'),
-      TOKEN_METADATA_PROGRAM_ID.toBuffer(),
-      mintAddress.toBuffer(),
-    ],
-    TOKEN_METADATA_PROGRAM_ID
-  );
-
-  // Fetch existing metadata account
-  const metadataAccountInfo = await connection.getAccountInfo(metadataAddress);
-  if (!metadataAccountInfo) {
-    throw new Error('Metadata account not found');
-  }
-
-  // Parse existing metadata - we need to extract the data
-  // This is complex because we need to deserialize the account
-  // For now, we'll create an instruction that updates with isMutable: false
-  // The Metaplex library should handle the deserialization internally
-  
-  // We need to fetch the actual metadata data to preserve it
-  // The update instruction requires the full data object
-  // This is a limitation - we'd need to properly deserialize the metadata
-  // For now, we'll create a minimal update that just sets isMutable to false
-  
-  // Simplified approach: create update instruction with minimal data
-  // The instruction will preserve existing data and only update isMutable
-  // Using V2 instruction which supports partial updates
-  return createUpdateMetadataAccountV2Instruction(
-    {
-      metadata: metadataAddress,
-      updateAuthority: updateAuthority,
-    },
-    {
-      updateMetadataAccountArgsV2: {
-        data: null, // null means don't update data
-        isMutable: false, // Set to immutable
-        updateAuthority: null, // null means don't change update authority
-        primarySaleHappened: null, // null means don't change
-      },
-    }
-  );
-}
-
-/**
  * Create a transaction instruction to revoke update authority using secureRPC
  * This version uses the secure RPC proxy (Helius/Alchemy) instead of direct connection
  */
@@ -537,7 +384,7 @@ export async function createRevokeUpdateAuthorityInstructionSecure(
   return createUpdateMetadataAccountV2Instruction(
     {
       metadata: metadataAddress,
-      updateAuthority: updateAuthority,
+      updateAuthority,
     },
     {
       updateMetadataAccountArgsV2: {

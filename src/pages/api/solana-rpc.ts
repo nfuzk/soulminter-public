@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { createRateLimit, rateLimitConfigs } from '../../middleware/rateLimit';
+import { createRateLimit } from '../../middleware/rateLimit';
 
-// Cold start tracking
+// Track cold start state for timeout adjustments
 let isWarmedUp = false;
 let lastRequestTime = 0;
 
@@ -60,7 +60,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // Detect cold start (function hasn't been called in 5 minutes)
     const isColdStart = !isWarmedUp || (Date.now() - lastRequestTime > 300000);
     if (isColdStart) {
-      console.log('Cold start detected, using extended timeouts');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Cold start detected, using extended timeouts');
+      }
       isWarmedUp = true;
     }
     lastRequestTime = Date.now();
@@ -86,9 +88,11 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     const alchemyApiKey = process.env.ALCHEMY_API_KEY;
     const forceAlchemyFallback = process.env.FORCE_ALCHEMY_FALLBACK === 'true';
     
-    // Check if we should force Alchemy fallback for testing
+    // Check if Alchemy fallback should be forced (for testing)
     if (forceAlchemyFallback) {
-      console.log('🧪 Force fallback mode: Using Alchemy directly for RPC');
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🧪 Force fallback mode: Using Alchemy directly for RPC');
+      }
       if (!alchemyApiKey) {
         return res.status(500).json({ 
           error: 'RPC configuration error: ALCHEMY_API_KEY is required when FORCE_ALCHEMY_FALLBACK is enabled' 
@@ -126,7 +130,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     // Use longer timeout for cold starts and sendTransaction
     const isSendTransaction = method === 'sendTransaction';
     const baseTimeout = isSendTransaction ? 60000 : 45000; // 60s for sendTransaction, 45s for others
-    const timeout = isColdStart ? baseTimeout * 1.5 : baseTimeout; // 90s/67.5s for cold starts
+    const timeout = isColdStart ? baseTimeout * 1.5 : baseTimeout; // Extended timeout for cold starts
 
     let lastError: Error | null = null;
 
@@ -163,7 +167,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
           // If it's a rate limit or temporary error, try next provider
           const errorCode = data.error.code;
           if (errorCode === 429 || errorCode === -32005 || errorCode === -32603) {
-            console.warn(`Provider ${provider.name} returned error, trying next:`, data.error);
+            if (process.env.NODE_ENV === 'development') {
+              console.warn(`Provider ${provider.name} returned error, trying next:`, data.error);
+            }
             lastError = new Error(data.error.message || 'RPC error');
             continue;
           }
@@ -173,17 +179,21 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
 
         // Success - log if we used a fallback
         if (provider.name !== 'helius' || forceAlchemyFallback) {
-          const logMessage = forceAlchemyFallback 
-            ? `🧪 Test mode: Using Alchemy fallback for ${method} on ${network}`
-            : `Used fallback provider: ${provider.name} for ${method} on ${network}`;
-          console.log(logMessage);
+          if (process.env.NODE_ENV === 'development') {
+            const logMessage = forceAlchemyFallback 
+              ? `🧪 Test mode: Using Alchemy fallback for ${method} on ${network}`
+              : `Used fallback provider: ${provider.name} for ${method} on ${network}`;
+            console.log(logMessage);
+          }
         }
 
         return res.status(200).json(data);
       } catch (error: any) {
         // Handle timeout errors
         if (error.name === 'AbortError') {
-          console.warn(`Provider ${provider.name} timed out after ${timeout}ms`);
+          if (process.env.NODE_ENV === 'development') {
+            console.warn(`Provider ${provider.name} timed out after ${timeout}ms`);
+          }
           lastError = new Error('RPC request timeout');
           // Continue to next provider if available
           if (provider !== providers[providers.length - 1]) {
@@ -198,7 +208,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         }
 
         // Handle network errors
-        console.warn(`Provider ${provider.name} failed:`, error.message);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`Provider ${provider.name} failed:`, error.message);
+        }
         lastError = error;
         
         // Continue to next provider if available

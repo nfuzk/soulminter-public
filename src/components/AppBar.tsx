@@ -1,16 +1,16 @@
-import { FC, useState, useEffect, useRef, useCallback } from "react";
+import { FC, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { WalletMultiButton, useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { useAutoConnect } from "../contexts/AutoConnectProvider";
 import { useCookieConsent } from "../contexts/CookieConsentContext";
 import { GearIcon, HamburgerMenuIcon } from "@radix-ui/react-icons";
-import { useConnection } from "@solana/wallet-adapter-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import type { WalletName } from "@solana/wallet-adapter-base";
 import { SolanaMobileWalletAdapterWalletName } from "@solana-mobile/wallet-standard-mobile";
 import type { SolanaSignInInput } from "@solana/wallet-standard-features";
 import { notify } from "../utils/notifications";
+import { FEATURES } from "../config";
 import styles from '../views/home/styles.module.css';
 
 export const AppBar: FC = () => {
@@ -20,9 +20,8 @@ export const AppBar: FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [isBlogSubdomain, setIsBlogSubdomain] = useState(false);
-  const { connection } = useConnection();
   const { disconnect, connected, wallet, connect, signIn, select, wallets, connecting } = useWallet();
-  const { setVisible: showWalletSelectionModal } = useWalletModal();
+  const { setVisible: showWalletSelectionModal, visible: walletModalVisible } = useWalletModal();
   const prevAutoConnectRef = useRef<boolean>(autoConnect);
 
   useEffect(() => {
@@ -33,7 +32,7 @@ export const AppBar: FC = () => {
     }
   }, []);
 
-  // Handle auto-connect toggle: when turned on, attempt to reconnect if wallet was previously connected
+  // Handle auto-connect: attempt to reconnect if wallet was previously connected
   useEffect(() => {
     // Only trigger if autoConnect was just turned on (changed from false to true)
     if (autoConnect && !prevAutoConnectRef.current && !connected && !connecting && mounted) {
@@ -50,7 +49,9 @@ export const AppBar: FC = () => {
           // Small delay to ensure wallet is selected before connecting
           setTimeout(() => {
             connect().catch((error) => {
-              console.log('Auto-connect attempt failed:', error);
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Auto-connect attempt failed:', error);
+              }
               // Don't show error to user - this is expected if wallet is not available
             });
           }, 100);
@@ -224,8 +225,8 @@ export const AppBar: FC = () => {
           <span className={styles.title} style={{fontSize: '1.5rem', marginBottom: 0, fontWeight: 700}}>SoulMinter</span>
         </Link>
       </div>
-      {/* Desktop Nav */}
-      <div className="flex-none gap-2 hidden md:flex items-center">
+      {/* Desktop Nav - visible from 1051px (matches site breakpoint 1050px) */}
+      <div className="flex-none gap-2 hidden min-[1051px]:flex items-center">
         <Link href={getMainSiteUrl('/')} className="btn btn-ghost">
           Home
         </Link>
@@ -235,23 +236,38 @@ export const AppBar: FC = () => {
         <Link href={getMainSiteUrl('/manage-token')} className="btn btn-ghost">
           Manage Tokens
         </Link>
-        <Link href={getMainSiteUrl('/affiliate')} className="btn btn-ghost">
-          Affiliate
-        </Link>
+        {FEATURES.ENABLE_AFFILIATE && (
+          <Link href={getMainSiteUrl('/affiliate')} className="btn btn-ghost">
+            Affiliate
+          </Link>
+        )}
         <Link href="https://blog.soulminter.io" className="btn btn-ghost">
           Blog
         </Link>
-        {mobileWalletAdapter ? (
-          <button
-            className="wallet-adapter-button wallet-adapter-button-trigger"
-            onClick={handleConnectClick}
-            disabled={false}
+        <div className="relative w-fit shrink-0 group">
+          {mobileWalletAdapter ? (
+            <button
+              className="wallet-adapter-button wallet-adapter-button-trigger"
+              onClick={handleConnectClick}
+              disabled={false}
+            >
+              {connected ? 'Disconnect' : 'Connect Wallet'}
+            </button>
+          ) : (
+            <WalletMultiButton />
+          )}
+          <div
+            role="tooltip"
+            className={`pointer-events-none absolute left-1/2 top-full z-[10000] mt-2 w-[min(16rem,calc(100vw-2rem))] -translate-x-1/2 rounded-lg border border-white/10 bg-[#181F2C] px-3 py-2 text-center text-[0.65rem] leading-snug text-white/85 opacity-0 shadow-xl transition-opacity duration-150 ${
+              walletModalVisible
+                ? ""
+                : "group-hover:opacity-100 group-has-[.wallet-adapter-dropdown-list-active]:!opacity-0"
+            }`}
           >
-            {connected ? 'Disconnect' : 'Connect Wallet'}
-          </button>
-        ) : (
-          <WalletMultiButton />
-        )}
+            We will never ask for your private keys or seed phrase. Connecting your wallet only allows us to read your
+            public address.
+          </div>
+        </div>
         <div className="dropdown dropdown-end">
           <label tabIndex={0} className="btn btn-ghost btn-square">
             <GearIcon className="h-5 w-5" />
@@ -281,8 +297,8 @@ export const AppBar: FC = () => {
           </ul>
         </div>
       </div>
-      {/* Mobile Nav */}
-      <div className="flex-none md:hidden">
+      {/* Mobile Nav - visible below 1051px */}
+      <div className="flex-none min-[1051px]:hidden">
         <button
           className="btn btn-ghost btn-square"
           onClick={() => setMenuOpen((open) => !open)}
@@ -301,13 +317,15 @@ export const AppBar: FC = () => {
             <Link href={getMainSiteUrl('/manage-token')} className="btn btn-ghost w-full mb-1" onClick={() => setMenuOpen(false)}>
               Manage Tokens
             </Link>
-            <Link href={getMainSiteUrl('/affiliate')} className="btn btn-ghost w-full mb-1" onClick={() => setMenuOpen(false)}>
-              Affiliate
-            </Link>
+            {FEATURES.ENABLE_AFFILIATE && (
+              <Link href={getMainSiteUrl('/affiliate')} className="btn btn-ghost w-full mb-1" onClick={() => setMenuOpen(false)}>
+                Affiliate
+              </Link>
+            )}
             <Link href="https://blog.soulminter.io" className="btn btn-ghost w-full mb-1" onClick={() => setMenuOpen(false)}>
               Blog
             </Link>
-            <div className="mb-1">
+            <div className="mb-1 flex flex-col gap-1">
               {mobileWalletAdapter ? (
                 <button
                   className="wallet-adapter-button wallet-adapter-button-trigger w-full"
@@ -322,6 +340,10 @@ export const AppBar: FC = () => {
               ) : (
                 <WalletMultiButton />
               )}
+              <p className="text-[0.625rem] leading-snug text-white/45 text-center m-0 px-0.5">
+                We will never ask for your private keys or seed phrase. Connecting your wallet only allows us to read
+                your public address.
+              </p>
             </div>
             <div className="w-full relative" ref={settingsRef}>
               <button 

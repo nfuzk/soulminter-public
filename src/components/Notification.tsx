@@ -12,7 +12,7 @@ const Notification = () => {
 
   // Automatically remove notifications after 5 seconds
   useEffect(() => {
-    if (notifications.length === 0) return;
+    if (notifications.length === 0) {return;}
     const timers = notifications.map((n, idx) =>
       n.persistent
         ? null

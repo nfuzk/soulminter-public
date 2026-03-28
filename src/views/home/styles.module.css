@@ -55,12 +55,61 @@
 }
 
 .hero {
-    padding: 120px 0 100px;
-    text-align: center;
+    padding: 80px clamp(1.5rem, 4vw, 3rem) 100px;
     position: relative;
-    min-height: 80vh;
+    min-height: 85vh;
     display: flex;
     align-items: center;
+    overflow: hidden;
+}
+
+.heroBg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.heroLineSvg {
+    position: absolute;
+    bottom: 0;
+    right: -5%;
+    width: 70%;
+    height: 100%;
+    min-height: 400px;
+    opacity: 0.95;
+}
+
+.heroLinePath {
+    vector-effect: non-scaling-stroke;
+}
+
+.heroGradientOrb {
+    position: absolute;
+    top: 20%;
+    right: 15%;
+    width: 50%;
+    max-width: 400px;
+    aspect-ratio: 1;
+    background: radial-gradient(
+        ellipse at center,
+        rgba(153, 69, 255, 0.18) 0%,
+        rgba(0, 194, 255, 0.08) 40%,
+        transparent 70%
+    );
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.heroContent {
+    position: relative;
+    z-index: 1;
+    max-width: 700px;
+    padding: 2rem clamp(1.5rem, 4vw, 3rem) 2rem clamp(2rem, 6vw, 4rem);
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
     justify-content: center;
 }
 
@@ -71,21 +120,33 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect fill="none" width="100" height="100"/><rect fill="none" stroke="rgba(153, 69, 255, 0.1)" stroke-width="1" x="25" y="25" width="50" height="50" transform="rotate(45 50 50)"/></svg>');
-    opacity: 0.3;
+    background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect fill="none" width="100" height="100"/><rect fill="none" stroke="rgba(153, 69, 255, 0.08)" stroke-width="1" x="25" y="25" width="50" height="50" transform="rotate(45 50 50)"/></svg>');
+    opacity: 0.4;
     z-index: -1;
+    pointer-events: none;
+}
+
+.heroContent .title {
+    margin-bottom: 2rem;
+    letter-spacing: -0.02em;
 }
 
 .title {
-    font-size: clamp(2.5rem, 5vw, 4rem);
+    font-size: clamp(2.5rem, 5vw, 3.75rem);
     margin-bottom: 1.5rem;
     background: var(--gradient-primary);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
     font-family: 'Orbitron', sans-serif;
-    line-height: 1.2;
+    font-weight: 700;
+    line-height: 1.15;
     text-shadow: 0 0 20px rgba(153, 69, 255, 0.3);
+}
+
+.heroContent .subtitle {
+    margin: 0 0 4rem 0;
+    max-width: 600px;
 }
 
 .subtitle {
@@ -149,6 +210,15 @@
     background-color: var(--darker-bg);
     position: relative;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.features .container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .features h2 {
@@ -160,6 +230,209 @@
     background-clip: text;
     color: transparent;
     font-family: 'Orbitron', sans-serif;
+}
+
+.featuresCarousel {
+    position: relative;
+    margin-top: 50px;
+    padding: 0 80px;
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Exact CodePen carousel styles (https://codepen.io/frise/pen/mZvKpe) */
+.carousel {
+    display: flex;
+    width: 100%;
+    min-height: 360px;
+    align-items: center;
+    font-family: Arial, sans-serif;
+}
+
+.carouselList {
+    display: flex;
+    list-style: none;
+    position: relative;
+    width: 100%;
+    height: 360px;
+    justify-content: center;
+    perspective: 300px;
+    margin: 0;
+    padding: 0;
+}
+
+.carouselItem {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 0;
+    width: 260px;
+    height: 340px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px 0 rgba(50, 50, 50, 0.5);
+    position: absolute;
+    left: 50%;
+    transition: all 0.3s ease-in;
+    cursor: pointer;
+}
+
+.carouselItem[data-pos="0"] {
+    transform: translate(-50%, 0);
+    z-index: 5;
+    cursor: default;
+    opacity: 1;
+    filter: none;
+}
+
+.carouselItem[data-pos="-1"],
+.carouselItem[data-pos="1"] {
+    opacity: 0.7;
+    filter: blur(1px) grayscale(10%);
+}
+
+.carouselItem[data-pos="-1"] {
+    transform: translate(-50%, 0) translateX(-40%) scale(0.9);
+    z-index: 4;
+}
+
+.carouselItem[data-pos="1"] {
+    transform: translate(-50%, 0) translateX(40%) scale(0.9);
+    z-index: 4;
+}
+
+.carouselItem[data-pos="-2"],
+.carouselItem[data-pos="2"] {
+    opacity: 0.4;
+    filter: blur(3px) grayscale(20%);
+}
+
+.carouselItem[data-pos="-2"] {
+    transform: translate(-50%, 0) translateX(-70%) scale(0.8);
+    z-index: 3;
+}
+
+.carouselItem[data-pos="2"] {
+    transform: translate(-50%, 0) translateX(70%) scale(0.8);
+    z-index: 3;
+}
+
+/* Strong glow for the selected (center) card, animated via smooth box-shadow transition */
+.carouselItem[data-pos="0"] .carouselItemContent {
+    background-color: rgb(25, 32, 48); /* fully opaque version of --card-bg */
+    box-shadow:
+        0 0 0 1px rgba(153, 69, 255, 0.95),
+        0 0 40px rgba(153, 69, 255, 0.85),
+        0 0 80px rgba(0, 194, 255, 0.45);
+}
+
+/* Card content inside CodePen item - our data, visible text */
+.carouselItemContent {
+    width: 100%;
+    height: 100%;
+    padding: 20px 16px;
+    box-sizing: border-box;
+    border-radius: 12px;
+    /* Base card background is slightly translucent, but the active card overrides this with fully opaque rgb() below */
+    background: var(--card-bg);
+    color: var(--light-text);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    overflow: hidden;
+    /* Smoothly animate glow changes when active card switches */
+    box-shadow:
+        0 0 0 1px rgba(153, 69, 255, 0.35),
+        0 0 24px rgba(0, 0, 0, 0.6);
+    transition: box-shadow 0.45s ease, background-color 0.45s ease;
+}
+
+.carouselItemContent h3 {
+    font-size: 1.25rem;
+    margin: 0 0 10px;
+    color: var(--light-text);
+    font-family: 'Orbitron', sans-serif;
+}
+
+.carouselItemContent p {
+    color: var(--gray-text);
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.carouselArrow {
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    transform: translateY(-50%);
+    z-index: 10;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1px solid rgba(153, 69, 255, 0.5);
+    background: rgba(25, 32, 48, 0.9);
+    color: var(--light-text);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+}
+
+.carouselArrow:hover:not(:disabled) {
+    background: rgba(153, 69, 255, 0.25);
+    border-color: var(--primary-color);
+}
+
+.carouselArrow:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.carouselArrow:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+.carouselArrowRight {
+    left: auto;
+    right: 12px;
+}
+
+.carouselDots {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 24px;
+}
+
+.carouselDot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(153, 69, 255, 0.35);
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.carouselDot:hover {
+    background: rgba(153, 69, 255, 0.6);
+}
+
+.carouselDotActive {
+    background: var(--primary-color);
+    transform: scale(1.2);
 }
 
 .featuresGrid {
@@ -185,6 +458,12 @@
 .featureItemVisible {
     opacity: 1;
     transform: translateY(0);
+}
+
+/* Carousel cards: override base .featureItem so they're visible (no opacity: 0 / translateY) */
+.featureItem.featureItemCarousel {
+    opacity: 1;
+    transform: none;
 }
 
 .featureItem::before {
@@ -223,12 +502,21 @@
 .howItWorks {
     padding: 100px 0;
     position: relative;
+    background:
+        radial-gradient(circle at top left, rgba(153, 69, 255, 0.16), transparent 55%),
+        radial-gradient(circle at bottom right, rgba(0, 194, 255, 0.22), transparent 55%),
+        var(--dark-bg);
+}
+
+.howItWorksHeader {
+    text-align: center;
+    margin-bottom: 48px;
 }
 
 .howItWorks h2 {
     text-align: center;
     font-size: clamp(1.8rem, 3vw, 2.5rem);
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
     background: var(--gradient-primary);
     -webkit-background-clip: text;
     background-clip: text;
@@ -236,30 +524,56 @@
     font-family: 'Orbitron', sans-serif;
 }
 
-.stepsList {
-    max-width: 800px;
+.howItWorksSubtitle {
+    text-align: center;
+    color: var(--gray-text);
+    max-width: 600px;
     margin: 0 auto;
-    list-style-position: inside;
-    counter-reset: steps;
+    font-size: 1rem;
+    line-height: 1.6;
 }
 
-.stepItem {
+.stepsList {
+    list-style: none;
+    margin: 0 auto;
+    padding: 0;
+    max-width: 720px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.stepCard {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    min-height: 100px;
+    padding: 0 28px 0 0;
+    background: #1a202c;
+    border-radius: 16px;
+    border: 1px solid rgba(153, 69, 255, 0.12);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
     position: relative;
-    padding: 25px 30px 25px 80px;
-    margin-bottom: 25px;
-    background: var(--card-bg);
-    border-radius: 15px;
-    counter-increment: steps;
-    box-shadow: var(--card-shadow);
-    border: 1px solid rgba(153, 69, 255, 0.1);
+    overflow: hidden;
     opacity: 0;
     transform: translateY(20px);
-    transition: all 0.3s ease;
+    transition: opacity 0.35s ease, transform 0.35s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
 
-.stepItem:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+.stepCard::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--gradient-primary);
+    opacity: 0.9;
+}
+
+.stepCard:hover {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+    border-color: rgba(153, 69, 255, 0.28);
 }
 
 .stepItemVisible {
@@ -267,22 +581,29 @@
     transform: translateY(0);
 }
 
-.stepItem::before {
-    content: counter(steps);
-    position: absolute;
-    left: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 40px;
-    height: 40px;
-    background: var(--gradient-primary);
+.stepNumber {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    margin-left: 20px;
     border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    background: var(--gradient-primary);
+    color: #fff;
     font-family: 'Orbitron', sans-serif;
     font-weight: bold;
-    font-size: 1.2rem;
+    font-size: 1.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 20px rgba(153, 69, 255, 0.4);
+}
+
+.stepText {
+    color: var(--light-text);
+    font-size: 0.95rem;
+    line-height: 1.55;
+    flex: 1;
+    min-width: 0;
 }
 
 .affiliate {
@@ -293,14 +614,36 @@
 
 .faq {
     padding: 100px 0;
-    background-color: var(--dark-bg);
     position: relative;
+    background:
+        radial-gradient(circle at top left, rgba(153, 69, 255, 0.16), transparent 55%),
+        radial-gradient(circle at bottom right, rgba(0, 194, 255, 0.22), transparent 55%),
+        var(--dark-bg);
 }
 
-.faq h2 {
+.faqHeader {
     text-align: center;
-    font-size: clamp(1.8rem, 3vw, 2.5rem);
-    margin-bottom: 3rem;
+    margin-bottom: 32px;
+}
+
+.faqLabelPill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(153, 69, 255, 0.7);
+    background: rgba(15, 22, 36, 0.95);
+    color: var(--accent-color);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+
+.faqHeader h2 {
+    font-size: clamp(2rem, 3vw, 2.6rem);
+    margin-bottom: 0.75rem;
     background: var(--gradient-primary);
     -webkit-background-clip: text;
     background-clip: text;
@@ -308,39 +651,111 @@
     font-family: 'Orbitron', sans-serif;
 }
 
+.faqSubtitle {
+    max-width: 560px;
+    margin: 0 auto;
+    color: var(--gray-text);
+    font-size: 0.98rem;
+}
+
 .faqGrid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: 30px;
-    max-width: 1200px;
-    margin: 0 auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    align-items: start;
+}
+
+.faqColumn {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
 }
 
 .faqItem {
-    background: var(--card-bg);
-    padding: 30px;
-    border-radius: 15px;
-    box-shadow: var(--card-shadow);
-    border: 1px solid rgba(153, 69, 255, 0.1);
-    transition: all 0.3s ease;
-    position: relative;
+    background: transparent;
+    border-radius: 18px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(153, 69, 255, 0.24);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
     overflow: hidden;
 }
 
 .faqItem::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 3px;
-    background: var(--gradient-primary);
+    content: none;
 }
 
 .faqItem:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
-    border-color: rgba(153, 69, 255, 0.3);
+    transform: translateY(-3px);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75);
+    border-color: rgba(153, 69, 255, 0.5);
+}
+
+.faqHeaderRow {
+    width: 100%;
+    height: 88px;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    background: rgba(15, 22, 36, 0.98);
+    color: var(--light-text);
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    box-sizing: border-box;
+}
+
+.faqHeaderRow:hover,
+.faqHeaderRow:focus-visible {
+    background: rgba(24, 32, 52, 0.98);
+    outline: none;
+}
+
+.faqQuestion {
+    flex: 1;
+    min-width: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    font-family: 'Orbitron', sans-serif;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.faqToggleIcon {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    border: 1px solid rgba(153, 69, 255, 0.6);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    line-height: 1;
+    background: rgba(15, 22, 36, 0.95);
+    color: var(--accent-color);
+}
+
+.faqBody {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(-4px);
+    background: rgba(5, 10, 24, 0.98);
+    transition: max-height 0.3s ease, opacity 0.3s ease, transform 0.3s ease;
+}
+
+.faqBodyOpen {
+    max-height: 500px;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.faqBodyInner {
+    padding: 0 20px 18px 20px;
 }
 
 .faqItem h3 {
@@ -378,9 +793,13 @@
 .cta {
     padding: 120px 0;
     text-align: center;
-    background: linear-gradient(rgba(15, 22, 36, 0.9), rgba(15, 22, 36, 0.9)), 
+    background: linear-gradient(rgba(15, 22, 36, 0.9), rgba(15, 22, 36, 0.9)),
                 url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect fill="none" width="100" height="100"/><circle fill="none" stroke="rgba(153, 69, 255, 0.2)" stroke-width="1" cx="50" cy="50" r="40"/></svg>');
     position: relative;
+}
+
+.cta .title {
+    font-size: clamp(1.6rem, 3.5vw, 2.25rem);
 }
 
 .cta p {
@@ -419,10 +838,62 @@
     animation: pulse 2s infinite;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1050px) {
     .hero {
         padding: 80px 0 60px;
         min-height: auto;
+        text-align: center;
+        justify-content: center;
+    }
+
+    .featuresCarousel {
+        padding: 0 50px;
+    }
+
+    .carouselItem {
+        width: 200px;
+        height: 280px;
+    }
+
+    .carouselArrow {
+        display: none;
+    }
+
+    .heroLineSvg {
+        width: 100%;
+        right: 0;
+        min-height: 280px;
+        opacity: 0.7;
+    }
+
+    .heroGradientOrb {
+        top: 10%;
+        right: 0;
+        width: 80%;
+    }
+
+    .heroContent {
+        max-width: none;
+        padding: 2rem 1.5rem;
+        text-align: center;
+        align-items: center;
+    }
+
+    .heroContent .title {
+        text-align: center;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .heroContent .subtitle {
+        text-align: center;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .heroContent .btn {
+        margin-left: auto;
+        margin-right: auto;
     }
     
     .featuresGrid {
@@ -433,10 +904,6 @@
     .faqGrid {
         grid-template-columns: 1fr;
         gap: 20px;
-    }
-    
-    .faqItem {
-        padding: 25px;
     }
     
     .stepItem {
@@ -455,10 +922,6 @@
     
     .features, .howItWorks, .affiliate, .faq, .cta {
         padding: 60px 0;
-    }
-    
-    .faqItem {
-        padding: 20px;
     }
     
     .faqItem h3 {

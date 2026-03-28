@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { createRateLimit, rateLimitConfigs } from '../../middleware/rateLimit';
-import { handleApiError } from '../../utils/errorHandler';
 import { uploadJSONWithFallback } from '../../lib/uploadService';
 
 // Security configuration
@@ -45,15 +44,15 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
   }
 
   try {
-    // Check if Arweave wallet is configured
-    const walletPath = process.env.ARWEAVE_WALLET_PATH;
-    const walletBase64 = process.env.ARWEAVE_WALLET_BASE64;
-    
-    if (!walletPath && !walletBase64) {
-      console.error('Neither ARWEAVE_WALLET_PATH nor ARWEAVE_WALLET_BASE64 configured');
-      return res.status(500).json({ error: 'ArDrive service not configured' });
-    }
+    // Ensure at least one storage backend is configured
+    const hasLighthouse = Boolean(process.env.LIGHTHOUSE_API_KEY);
+    const hasPinata = Boolean(process.env.PINATA_JWT);
+    const hasArDrive = Boolean(process.env.ARWEAVE_WALLET_PATH || process.env.ARWEAVE_WALLET_BASE64);
 
+    if (!hasLighthouse && !hasPinata && !hasArDrive) {
+      console.error('No storage backend configured (LIGHTHOUSE_API_KEY, PINATA_JWT, or Arweave wallet)');
+      return res.status(500).json({ error: 'No storage service configured' });
+    }
 
     const { metadata } = req.body;
 
@@ -68,7 +67,6 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     }
 
     const result = await uploadJSONWithFallback(metadata);
-
     return res.status(200).json({
       success: true,
       ipfsHash: result.hash,
@@ -76,10 +74,10 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
     });
 
   } catch (error) {
-    console.error('ArDrive upload error:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Metadata upload error:', error instanceof Error ? error.message : 'Unknown error');
     
     return res.status(500).json({
-      error: 'ArDrive upload failed',
+      error: 'Metadata upload failed',
       details: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
